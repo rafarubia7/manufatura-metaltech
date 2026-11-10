@@ -1,0 +1,116 @@
+# Análise Inicial do Dataset - MetalTech Monitoramento Industrial
+
+## 1. Estatística Descritiva
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from datetime import datetime
+
+# Carregar dataset
+df = pd.read_csv('leituras_simuladas.csv')
+df['timestamp'] = pd.to_datetime(df['timestamp'])
+
+print("=== ESTATÍSTICA DESCRITIVA ===")
+print(df.describe())
+print("\n=== DISTRIBUIÇÃO DE TIPOS DE PEÇA ===")
+print(df['tipo_peca'].value_counts())
+print("\n=== DISTRIBUIÇÃO DE STATUS DO RESERVATÓRIO ===")
+print(df['status_reservatorio'].value_counts())
+
+## 2. Visualizações
+
+plt.style.use('seaborn-v0_8')
+fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+
+# 1. Série temporal - Contagem de peças por tipo
+df['hora'] = df['timestamp'].dt.floor('H')
+contagem_hora = df.groupby(['hora', 'tipo_peca']).size().unstack(fill_value=0)
+contagem_hora.plot(kind='line', ax=axes[0,0])
+axes[0,0].set_title('Contagem de Peças por Tipo (Hora)')
+axes[0,0].set_ylabel('Quantidade')
+axes[0,0].legend(title='Tipo')
+
+# 2. Série temporal - Nível do reservatório
+df.set_index('timestamp')['nivel_reservatorio_percentual'].plot(ax=axes[0,1])
+axes[0,1].axhline(y=20, color='orange', linestyle='--', label='Alerta Baixo')
+axes[0,1].axhline(y=80, color='red', linestyle='--', label='Alerta Alto')
+axes[0,1].axhline(y=95, color='darkred', linestyle='--', label='Crítico')
+axes[0,1].set_title('Nível do Reservatório ao Longo do Tempo')
+axes[0,1].set_ylabel('Percentual (%)')
+axes[0,1].legend()
+
+# 3. Histograma - Distribuição do nível do reservatório
+axes[0,2].hist(df['nivel_reservatorio_percentual'], bins=30, edgecolor='black', alpha=0.7)
+axes[0,2].axvline(x=20, color='orange', linestyle='--', label='Alerta Baixo')
+axes[0,2].axvline(x=80, color='red', linestyle='--', label='Alerta Alto')
+axes[0,2].axvline(x=95, color='darkred', linestyle='--', label='Crítico')
+axes[0,2].set_title('Distribuição do Nível do Reservatório')
+axes[0,2].set_xlabel('Percentual (%)')
+axes[0,2].set_ylabel('Frequência')
+axes[0,2].legend()
+
+# 4. Boxplot - Nível por status
+df_box = df[['nivel_reservatorio_percentual', 'status_reservatorio']].copy()
+sns.boxplot(data=df_box, x='status_reservatorio', y='nivel_reservatorio_percentual', ax=axes[1,0])
+axes[1,0].set_title('Nível do Reservatório por Status')
+axes[1,0].set_xlabel('Status')
+axes[1,0].set_ylabel('Percentual (%)')
+
+# 5. Gráfico de barras - Proporção metálico x não metálico
+proporcao = df['tipo_peca'].value_counts()
+axes[1,1].bar(proporcao.index, proporcao.values, color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728'])
+axes[1,1].set_title('Proporção de Peças por Tipo')
+axes[1,1].set_ylabel('Quantidade')
+
+# 6. Dispersão - Distância vs Intensidade dos sensores
+axes[1,2].scatter(df['distancia_cm'], df['indutivo_intensidade'], alpha=0.6, label='Indutivo', color='blue')
+axes[1,2].scatter(df['distancia_cm'], df['capacitivo_intensidade'], alpha=0.6, label='Capacitivo', color='orange')
+axes[1,2].set_title('Distância vs Intensidade dos Sensores')
+axes[1,2].set_xlabel('Distância (cm)')
+axes[1,2].set_ylabel('Intensidade')
+axes[1,2].legend()
+
+plt.tight_layout()
+plt.savefig('analise_visualizacoes.png', dpi=300, bbox_inches='tight')
+
+## 3. Detecção de Outliers
+
+# Outlier 1: Reservatório enchendo > 5% por minuto
+df = df.sort_values('timestamp')
+df['variacao_nivel'] = df['nivel_reservatorio_percentual'].diff()
+df['tempo_diff'] = df['timestamp'].diff().dt.total_seconds() / 60  # minutos
+df['taxa_variacao'] = df['variacao_nivel'] / df['tempo_diff']
+
+outliers_enchendo = df[df['taxa_variacao'] > 5]
+print(f"\n=== OUTLIERS: RESERVATÓRIO ENCENDO > 5%/min ===")
+print(outliers_enchendo[['timestamp', 'nivel_reservatorio_percentual', 'taxa_variacao']])
+
+# Outlier 2: Reservatório esvaziando > 3% por minuto
+outliers_esvaziando = df[df['taxa_variacao'] < -3]
+print(f"\n=== OUTLIERS: RESERVATÓRIO ESVAZIANDO > 3%/min ===")
+print(outliers_esvaziando[['timestamp', 'nivel_reservatorio_percentual', 'taxa_variacao']])
+
+# Outlier 3: Sensores com intensidade < 0.1
+outliers_sensores = df[(df['indutivo_intensidade'] < 0.1) | (df['capacitivo_intensidade'] < 0.1)]
+print(f"\n=== OUTLIERS: INTENSIDADE SENSOR < 0.1 ===")
+print(outliers_sensores[['timestamp', 'indutivo_intensidade', 'capacitivo_intensidade']])
+
+# Outlier 4: Tipo de peça "AMBAS" (conflito de sensores)
+outliers_ambas = df[df['tipo_peca'] == 'AMBAS']
+print(f"\n=== OUTLIERS: CONFLITO DE SENSORES (AMBAS) ===")
+print(outliers_ambas[['timestamp', 'indutivo_detectou_metal', 'capacitivo_detectou_nao_metal']])
+
+## 4. Relatório de Conclusões
+
+print("\n=== RESUMO DOS ENCONTRAMENTOS ===")
+print(f"Total de leituras: {len(df)}")
+print(f"Período analisado: {df['timestamp'].min()} até {df['timestamp'].max()}")
+print(f"Média do nível do reservatório: {df['nivel_reservatorio_percentual'].mean():.2f}%")
+print(f"Desvio padrão do nível: {df['nivel_reservatorio_percentual'].std():.2f}%")
+print(f"Peças metálicas: {len(df[df['tipo_peca'] == 'METALICA'])} ({(len(df[df['tipo_peca'] == 'METALICA']) / len(df) * 100):.1f}%)")
+print(f"Peças não metálicas: {len(df[df['tipo_peca'] == 'NAO_METALICA'])} ({(len(df[df['tipo_peca'] == 'NAO_METALICA']) / len(df) * 100):.1f}%)")
+print(f"Peças desconhecidas: {len(df[df['tipo_peca'] == 'DESCONHECIDA'])} ({(len(df[df['tipo_peca'] == 'DESCONHECIDA']) / len(df) * 100):.1f}%)")
+print(f"Conflitos de sensores (AMBAS): {len(df[df['tipo_peca'] == 'AMBAS'])}")
+print(f"Alertas críticos (>95%): {len(df[df['status_reservatorio'] == 'CRITICO'])}")
