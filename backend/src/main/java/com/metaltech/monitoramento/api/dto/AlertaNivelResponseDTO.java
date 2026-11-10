@@ -14,6 +14,8 @@ import lombok.Setter;
 public class AlertaNivelResponseDTO {
 
     private Long id;
+    private Long leituraId;
+    private String dispositivoId;
     private Instant timestampAlertado;
     private String tipoAlerta;
     private String mensagem;

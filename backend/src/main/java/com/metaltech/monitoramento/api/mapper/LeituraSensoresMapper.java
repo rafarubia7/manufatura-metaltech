@@ -106,6 +106,10 @@ public class LeituraSensoresMapper {
 
         AlertaNivelResponseDTO dto = new AlertaNivelResponseDTO();
         dto.setId(entity.getId());
+        if (entity.getLeitura() != null) {
+            dto.setLeituraId(entity.getLeitura().getId());
+            dto.setDispositivoId(entity.getLeitura().getDispositivoId());
+        }
         dto.setTimestampAlertado(entity.getTimestampAlertado());
         dto.setTipoAlerta(entity.getTipoAlerta() != null ? entity.getTipoAlerta().name() : null);
         dto.setMensagem(entity.getMensagem());
@@ -127,10 +131,18 @@ public class LeituraSensoresMapper {
         return TipoPeca.valueOf(value);
     }
 
+    /**
+     * O status enviado pelo dispositivo é apenas informativo: o service recalcula
+     * a partir do percentual. Valores ausentes ou desconhecidos viram nulo.
+     */
     private StatusReservatorio parseStatusReservatorio(String value) {
         if (value == null || value.isBlank()) {
-            return StatusReservatorio.NORMAL;
+            return null;
         }
-        return StatusReservatorio.valueOf(value);
+        try {
+            return StatusReservatorio.valueOf(value);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }

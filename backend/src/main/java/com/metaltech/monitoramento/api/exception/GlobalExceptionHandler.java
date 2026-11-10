@@ -53,6 +53,18 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return new ResponseEntity<>(error, org.springframework.http.HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex, WebRequest request) {
+        ErrorResponse error = new ErrorResponse(
+            Instant.now(),
+            "BAD_REQUEST",
+            ex.getMessage(),
+            request.getDescription(false),
+            List.of()
+        );
+        return new ResponseEntity<>(error, org.springframework.http.HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, WebRequest request) {
         ErrorResponse error = new ErrorResponse(
