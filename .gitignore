@@ -1,13 +1,9 @@
-# ==========================================
-# ARQUIVOS DE DOCUMENTAÇÃO MARKDOWN
-# ==========================================
+# Documentação Markdown (somente README e docs/ são versionados)
 *.md
 !README.md
 !docs/*.md
 
-# ==========================================
-# JAVA / SPRING BOOT / MAVEN
-# ==========================================
+# Java / Spring Boot / Maven
 target/
 !.mvn/wrapper/maven-wrapper.jar
 log/
@@ -21,9 +17,7 @@ logs/
 *.tar.gz
 *.rar
 
-# ==========================================
-# PYTHON / CIÊNCIA DE DADOS
-# ==========================================
+# Python / Ciência de Dados
 __pycache__/
 *.py[cod]
 *$py.class
@@ -52,17 +46,13 @@ venv/
 # Resultados gerados a partir do banco local (variam com o estado da base)
 dados/resultados/*_api.*
 
-# ==========================================
-# AMBIENTE E SEGURANÇA
-# ==========================================
+# Ambiente e segurança
 .env
 .env.local
 *.pem
 secrets/
 
-# ==========================================
-# IDEs E SISTEMA OPERACIONAL
-# ==========================================
+# IDEs e sistema operacional
 .idea/
 .vscode/
 *.iml

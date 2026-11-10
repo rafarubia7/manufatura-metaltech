@@ -6,7 +6,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,11 +18,7 @@ import com.metaltech.monitoramento.infrastructure.repository.LeituraSensoresRepo
 
 import lombok.RequiredArgsConstructor;
 
-/**
- * Indicadores operacionais da esteira calculados sobre as leituras persistidas.
- * Os quartis usam interpolação linear e o desvio padrão é amostral (n - 1),
- * as mesmas convenções do pandas, para permitir a validação cruzada com a CIDA.
- */
+// Quartis com interpolação linear e desvio padrão amostral: mesmas convenções do pandas (validação com a CIDA).
 @Service
 @RequiredArgsConstructor
 public class EstatisticasService {
@@ -31,16 +26,13 @@ public class EstatisticasService {
     private final LeituraSensoresRepository leituraRepository;
     private final AlertaNivelRepository alertaRepository;
 
-    /**
-     * @param inicio início do período (inclusivo); nulo junto com {@code fim} = todo o histórico
-     * @param fim    fim do período (inclusivo)
-     */
+    // Sem início e fim, considera todo o histórico.
     @Transactional(readOnly = true)
     public Map<String, Object> calcularEstatisticas(Instant inicio, Instant fim) {
         boolean periodoInformado = inicio != null && fim != null;
         List<LeituraSensores> leituras = periodoInformado
-                ? leituraRepository.findByTimestampBetween(inicio, fim)
-                : leituraRepository.findAll(Sort.by("timestamp"));
+                ? leituraRepository.buscarPorPeriodo(inicio, fim)
+                : leituraRepository.listarEmOrdemCronologica();
 
         Map<TipoPeca, Long> porTipo = new EnumMap<>(TipoPeca.class);
         for (TipoPeca tipo : TipoPeca.values()) {
@@ -50,9 +42,9 @@ public class EstatisticasService {
         for (StatusReservatorio status : StatusReservatorio.values()) {
             porStatus.put(status, 0L);
         }
-        for (LeituraSensores l : leituras) {
-            porTipo.merge(l.getTipoPeca(), 1L, Long::sum);
-            porStatus.merge(l.getStatusReservatorio(), 1L, Long::sum);
+        for (LeituraSensores leitura : leituras) {
+            porTipo.merge(leitura.getTipoPeca(), 1L, Long::sum);
+            porStatus.merge(leitura.getStatusReservatorio(), 1L, Long::sum);
         }
 
         List<Double> niveis = leituras.stream()
@@ -64,8 +56,8 @@ public class EstatisticasService {
         double media = niveis.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
 
         Map<String, Object> estatisticas = new LinkedHashMap<>();
-        estatisticas.put("periodoInicio", periodoInformado ? inicio : (total > 0 ? leituras.get(0).getTimestamp() : null));
-        estatisticas.put("periodoFim", periodoInformado ? fim : (total > 0 ? leituras.get(total - 1).getTimestamp() : null));
+        estatisticas.put("periodoInicio", periodoInformado ? inicio : (total > 0 ? leituras.get(0).getDataHora() : null));
+        estatisticas.put("periodoFim", periodoInformado ? fim : (total > 0 ? leituras.get(total - 1).getDataHora() : null));
         estatisticas.put("totalLeituras", total);
         estatisticas.put("totalMetalicas", porTipo.get(TipoPeca.METALICA));
         estatisticas.put("totalNaoMetalicas", porTipo.get(TipoPeca.NAO_METALICA));
@@ -81,7 +73,7 @@ public class EstatisticasService {
         estatisticas.put("minimoNivelReservatorio", niveis.isEmpty() ? 0.0 : niveis.get(0));
         estatisticas.put("maximoNivelReservatorio", niveis.isEmpty() ? 0.0 : niveis.get(niveis.size() - 1));
         estatisticas.put("distribuicaoStatusReservatorio", contagensComPercentual(porStatus, total));
-        estatisticas.put("alertasAtivos", alertaRepository.countByResolvidoFalse());
+        estatisticas.put("alertasAtivos", alertaRepository.contarNaoResolvidos());
         estatisticas.put("alertasPorTipo", contarAlertas(periodoInformado
                 ? alertaRepository.contarPorTipoNoPeriodo(inicio, fim)
                 : alertaRepository.contarPorTipo()));
@@ -90,16 +82,16 @@ public class EstatisticasService {
 
     private <E extends Enum<E>> Map<String, Double> percentuais(Map<E, Long> contagens, int total) {
         Map<String, Double> resultado = new LinkedHashMap<>();
-        contagens.forEach((chave, qtd) -> resultado.put(chave.name(), total == 0 ? 0.0 : arredondar(100.0 * qtd / total)));
+        contagens.forEach((chave, quantidade) -> resultado.put(chave.name(), total == 0 ? 0.0 : arredondar(100.0 * quantidade / total)));
         return resultado;
     }
 
     private <E extends Enum<E>> Map<String, Map<String, Object>> contagensComPercentual(Map<E, Long> contagens, int total) {
         Map<String, Map<String, Object>> resultado = new LinkedHashMap<>();
-        contagens.forEach((chave, qtd) -> {
+        contagens.forEach((chave, quantidade) -> {
             Map<String, Object> item = new LinkedHashMap<>();
-            item.put("quantidade", qtd);
-            item.put("percentual", total == 0 ? 0.0 : arredondar(100.0 * qtd / total));
+            item.put("quantidade", quantidade);
+            item.put("percentual", total == 0 ? 0.0 : arredondar(100.0 * quantidade / total));
             resultado.put(chave.name(), item);
         });
         return resultado;
@@ -121,27 +113,26 @@ public class EstatisticasService {
             return 0.0;
         }
         double somaQuadrados = valores.stream()
-                .mapToDouble(v -> Math.pow(v - media, 2))
+                .mapToDouble(valor -> Math.pow(valor - media, 2))
                 .sum();
         return Math.sqrt(somaQuadrados / (valores.size() - 1));
     }
 
-    /** Percentil com interpolação linear sobre a lista já ordenada. */
-    private double calcularPercentil(List<Double> valores, int percentual) {
-        if (valores.isEmpty()) {
+    private double calcularPercentil(List<Double> valoresOrdenados, int percentual) {
+        if (valoresOrdenados.isEmpty()) {
             return 0.0;
         }
-        if (valores.size() == 1) {
-            return valores.get(0);
+        if (valoresOrdenados.size() == 1) {
+            return valoresOrdenados.get(0);
         }
-        double posicao = (percentual / 100.0) * (valores.size() - 1);
+        double posicao = (percentual / 100.0) * (valoresOrdenados.size() - 1);
         int indiceBase = (int) Math.floor(posicao);
         double fracao = posicao - indiceBase;
-        if (indiceBase >= valores.size() - 1) {
-            return valores.get(valores.size() - 1);
+        if (indiceBase >= valoresOrdenados.size() - 1) {
+            return valoresOrdenados.get(valoresOrdenados.size() - 1);
         }
-        double inferior = valores.get(indiceBase);
-        double superior = valores.get(indiceBase + 1);
+        double inferior = valoresOrdenados.get(indiceBase);
+        double superior = valoresOrdenados.get(indiceBase + 1);
         return inferior + (superior - inferior) * fracao;
     }
 

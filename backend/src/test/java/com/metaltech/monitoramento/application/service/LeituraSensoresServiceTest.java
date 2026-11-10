@@ -50,18 +50,18 @@ class LeituraSensoresServiceTest {
     @InjectMocks
     private LeituraSensoresService leituraService;
 
-    private Instant timestamp;
+    private Instant dataHora;
 
     @BeforeEach
-    void setUp() {
-        timestamp = Instant.parse("2026-11-03T10:00:00Z");
+    void preparar() {
+        dataHora = Instant.parse("2026-11-03T10:00:00Z");
         when(leituraRepository.save(any(LeituraSensores.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(alertaRepository.findByTipoAlertaInAndResolvidoFalseAndLeitura_DispositivoId(anyCollection(), anyString()))
+        when(alertaRepository.buscarAtivosPorTipos(anyCollection(), anyString()))
                 .thenReturn(List.of());
     }
 
     private LeituraSensores leitura(TipoPeca tipo, double percentual, StatusReservatorio statusInformado) {
-        return new LeituraSensores(null, timestamp, 12.5, true, 0.85, tipo == TipoPeca.AMBAS, 0.12,
+        return new LeituraSensores(null, dataHora, 12.5, true, 0.85, tipo == TipoPeca.AMBAS, 0.12,
                 tipo, percentual, statusInformado, "ESP32-001", "1.0.0", Collections.emptyList());
     }
 
@@ -82,22 +82,21 @@ class LeituraSensoresServiceTest {
     }
 
     @Test
-    void deveGerarAlertaCriticoVinculadoALeituraComTimestampDaLeitura() {
+    void deveGerarAlertaCriticoComDataHoraDaLeitura() {
         LeituraSensores salva = leituraService.salvarLeitura(leitura(TipoPeca.METALICA, 96.0, null));
 
         assertThat(salva.getAlertas()).hasSize(1);
         AlertaNivel alerta = salva.getAlertas().get(0);
         assertThat(alerta.getTipoAlerta()).isEqualTo(TipoAlerta.RESERVATORIO_CRITICO);
         assertThat(alerta.getLeitura()).isSameAs(salva);
-        assertThat(alerta.getTimestampAlertado()).isEqualTo(timestamp);
+        assertThat(alerta.getDataHoraAlerta()).isEqualTo(dataHora);
         assertThat(alerta.getResolvido()).isFalse();
-        // Persistência acontece em cascata pela leitura, nunca isoladamente
         verify(alertaRepository, never()).save(any(AlertaNivel.class));
     }
 
     @Test
     void naoDeveDuplicarAlertaDeReservatorioJaAtivo() {
-        when(alertaRepository.existsByTipoAlertaAndResolvidoFalseAndLeitura_DispositivoId(
+        when(alertaRepository.existeAtivo(
                 TipoAlerta.RESERVATORIO_ALTO, "ESP32-001")).thenReturn(true);
 
         LeituraSensores salva = leituraService.salvarLeitura(leitura(TipoPeca.METALICA, 85.0, StatusReservatorio.ALERTA_ALTO));
@@ -107,9 +106,9 @@ class LeituraSensoresServiceTest {
 
     @Test
     void deveResolverAlertasDeReservatorioQuandoNivelVoltaAoNormal() {
-        AlertaNivel aberto = new AlertaNivel(leitura(TipoPeca.METALICA, 85.0, null), timestamp,
+        AlertaNivel aberto = new AlertaNivel(leitura(TipoPeca.METALICA, 85.0, null), dataHora,
                 TipoAlerta.RESERVATORIO_ALTO, "alto", false);
-        when(alertaRepository.findByTipoAlertaInAndResolvidoFalseAndLeitura_DispositivoId(anyCollection(), eq("ESP32-001")))
+        when(alertaRepository.buscarAtivosPorTipos(anyCollection(), eq("ESP32-001")))
                 .thenReturn(List.of(aberto));
 
         leituraService.salvarLeitura(leitura(TipoPeca.METALICA, 30.0, StatusReservatorio.NORMAL));
@@ -129,22 +128,22 @@ class LeituraSensoresServiceTest {
     @Test
     void deveBuscarPorPeriodo() {
         LeituraSensores l = leitura(TipoPeca.METALICA, 50.0, null);
-        when(leituraRepository.findByTimestampBetween(any(Instant.class), any(Instant.class))).thenReturn(List.of(l));
+        when(leituraRepository.buscarPorPeriodo(any(Instant.class), any(Instant.class))).thenReturn(List.of(l));
 
-        assertThat(leituraService.buscarPorPeriodo(timestamp, timestamp)).hasSize(1);
+        assertThat(leituraService.buscarPorPeriodo(dataHora, dataHora)).hasSize(1);
     }
 
     @Test
     void deveListarTodasComPaginacao() {
         Page<LeituraSensores> page = new PageImpl<>(List.of(leitura(TipoPeca.METALICA, 50.0, null)));
-        when(leituraRepository.findAllByOrderByTimestampDesc(any(Pageable.class))).thenReturn(page);
+        when(leituraRepository.listarMaisRecentes(any(Pageable.class))).thenReturn(page);
 
         assertThat(leituraService.listarTodas(Pageable.unpaged()).getContent()).hasSize(1);
     }
 
     @Test
     void deveResolverAlertaExistente() {
-        AlertaNivel alerta = new AlertaNivel(null, timestamp, TipoAlerta.RESERVATORIO_ALTO, "alto", false);
+        AlertaNivel alerta = new AlertaNivel(null, dataHora, TipoAlerta.RESERVATORIO_ALTO, "alto", false);
         when(alertaRepository.findById(1L)).thenReturn(Optional.of(alerta));
 
         leituraService.resolverAlerta(1L);

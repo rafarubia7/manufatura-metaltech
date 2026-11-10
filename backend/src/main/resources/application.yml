@@ -5,7 +5,7 @@ spring:
   application:
     name: metaltech-monitoramento
   datasource:
-    # Valores padrão para execução local; no Docker são sobrescritos por variáveis de ambiente
+    # Sobrescrito por variáveis de ambiente no Docker.
     url: ${DB_URL:jdbc:postgresql://localhost:5432/metaltech}
     username: ${DB_USERNAME:metaltech}
     password: ${DB_PASSWORD:metaltech123}
@@ -14,7 +14,7 @@ spring:
       maximum-pool-size: 10
       connection-timeout: 30000
   jpa:
-    # Mantido ativo: o mapper serializa a coleção de alertas (lazy) após o service
+    # Necessário: o mapper lê a coleção lazy de alertas fora do service.
     open-in-view: true
     hibernate:
       ddl-auto: validate
@@ -22,7 +22,7 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        # Carrega alertas de várias leituras em uma única consulta (evita N+1 na listagem)
+        # Evita N+1 ao carregar alertas na listagem.
         default_batch_fetch_size: 100
         jdbc:
           time_zone: UTC

@@ -2,9 +2,10 @@ package com.metaltech.monitoramento.api.dto;
 
 import java.time.Instant;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,5 +25,6 @@ public class PecaDTO {
     private String tipo;
 
     @NotNull
-    private Instant timestampDetectado;
+    @JsonProperty("timestampDetectado")
+    private Instant dataHoraDeteccao;
 }

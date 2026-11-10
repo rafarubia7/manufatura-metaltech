@@ -21,9 +21,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.metaltech.monitoramento.api.dto.AlertaNivelResponseDTO;
+import com.metaltech.monitoramento.api.dto.AlertaNivelRespostaDTO;
 import com.metaltech.monitoramento.api.dto.LeituraSensoresDTO;
-import com.metaltech.monitoramento.api.dto.LeituraSensoresResponseDTO;
+import com.metaltech.monitoramento.api.dto.LeituraSensoresRespostaDTO;
 import com.metaltech.monitoramento.api.mapper.LeituraSensoresMapper;
 import com.metaltech.monitoramento.application.service.EstatisticasService;
 import com.metaltech.monitoramento.application.service.LeituraSensoresService;
@@ -50,9 +50,9 @@ public class LeituraSensoresController {
     @Operation(summary = "Registra uma leitura dos sensores",
             description = "O status do reservatório é recalculado pelo backend a partir do percentual "
                     + "(baixo < 20%, alto > 80%, crítico >= 95%). Alertas são gerados automaticamente.")
-    public ResponseEntity<LeituraSensoresResponseDTO> criarLeitura(@Valid @RequestBody LeituraSensoresDTO dto) {
-        LeituraSensores salva = leituraService.salvarLeitura(mapper.toEntity(dto));
-        return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toResponseDto(salva));
+    public ResponseEntity<LeituraSensoresRespostaDTO> criarLeitura(@Valid @RequestBody LeituraSensoresDTO dto) {
+        LeituraSensores salva = leituraService.salvarLeitura(mapper.paraEntidade(dto));
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapper.paraRespostaDto(salva));
     }
 
     @GetMapping
@@ -62,59 +62,56 @@ public class LeituraSensoresController {
             @RequestParam(name = "fim", required = false) @DateTimeFormat(iso = ISO.DATE_TIME) Instant fim,
             @RequestParam(name = "tipoPeca", required = false) TipoPeca tipoPeca,
             @RequestParam(name = "statusReservatorio", required = false) StatusReservatorio statusReservatorio,
-            @PageableDefault(size = 100, sort = "timestamp") Pageable pageable) {
+            @PageableDefault(size = 100, sort = "dataHora") Pageable paginacao) {
 
-        Page<LeituraSensores> page;
-
-        if (inicio != null && fim != null && tipoPeca != null) {
-            page = leituraService.findByTimestampAndTipoPeca(inicio, fim, tipoPeca, pageable);
-        } else if (inicio != null && fim != null && statusReservatorio != null) {
-            page = leituraService.findByTimestampAndStatusReservatorio(inicio, fim, statusReservatorio, pageable);
-        } else if (inicio != null && fim != null) {
-            page = leituraService.findByTimestampBetween(inicio, fim, pageable);
+        boolean comPeriodo = inicio != null && fim != null;
+        Page<LeituraSensores> pagina;
+        if (comPeriodo && tipoPeca != null) {
+            pagina = leituraService.buscarPorPeriodoETipoPeca(inicio, fim, tipoPeca, paginacao);
+        } else if (comPeriodo && statusReservatorio != null) {
+            pagina = leituraService.buscarPorPeriodoEStatusReservatorio(inicio, fim, statusReservatorio, paginacao);
+        } else if (comPeriodo) {
+            pagina = leituraService.buscarPorPeriodo(inicio, fim, paginacao);
         } else if (tipoPeca != null) {
-            page = leituraService.findByTipoPeca(tipoPeca, pageable);
+            pagina = leituraService.buscarPorTipoPeca(tipoPeca, paginacao);
         } else if (statusReservatorio != null) {
-            page = leituraService.findByStatusReservatorio(statusReservatorio, pageable);
+            pagina = leituraService.buscarPorStatusReservatorio(statusReservatorio, paginacao);
         } else {
-            page = leituraService.listarTodas(pageable);
+            pagina = leituraService.listarTodas(paginacao);
         }
 
-        List<LeituraSensoresResponseDTO> content = page.getContent().stream()
-                .map(mapper::toResponseDto)
+        List<LeituraSensoresRespostaDTO> conteudo = pagina.getContent().stream()
+                .map(mapper::paraRespostaDto)
                 .toList();
 
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("content", content);
-
-        long offset = page.getPageable().isPaged() ? page.getPageable().getOffset() : 0L;
-        response.put("pageable", Map.of(
-                "pageNumber", page.getNumber(),
-                "pageSize", page.getSize(),
-                "sort", page.getSort().toString(),
-                "offset", offset));
-        response.put("totalElements", page.getTotalElements());
-        response.put("totalPages", page.getTotalPages());
-        response.put("last", page.isLast());
-        response.put("first", page.isFirst());
-        response.put("numberOfElements", page.getNumberOfElements());
-
-        return ResponseEntity.ok(response);
+        Map<String, Object> resposta = new LinkedHashMap<>();
+        resposta.put("conteudo", conteudo);
+        resposta.put("paginacao", Map.of(
+                "numeroPagina", pagina.getNumber(),
+                "tamanhoPagina", pagina.getSize(),
+                "ordenacao", pagina.getSort().toString(),
+                "deslocamento", pagina.getPageable().isPaged() ? pagina.getPageable().getOffset() : 0L));
+        resposta.put("totalElementos", pagina.getTotalElements());
+        resposta.put("totalPaginas", pagina.getTotalPages());
+        resposta.put("ultima", pagina.isLast());
+        resposta.put("primeira", pagina.isFirst());
+        resposta.put("quantidadeElementos", pagina.getNumberOfElements());
+        return ResponseEntity.ok(resposta);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Busca uma leitura pelo id")
-    public ResponseEntity<LeituraSensoresResponseDTO> buscarPorId(@PathVariable("id") Long id) {
+    public ResponseEntity<LeituraSensoresRespostaDTO> buscarPorId(@PathVariable("id") Long id) {
         return leituraService.buscarPorId(id)
-                .map(mapper::toResponseDto)
+                .map(mapper::paraRespostaDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/alertas")
     @Operation(summary = "Lista os alertas ainda não resolvidos, do mais recente para o mais antigo")
-    public ResponseEntity<List<AlertaNivelResponseDTO>> listarAlertasNaoResolvidos() {
-        return ResponseEntity.ok(mapper.toAlertaResponseDtoList(leituraService.buscarAlertasNaoResolvidos()));
+    public ResponseEntity<List<AlertaNivelRespostaDTO>> listarAlertasNaoResolvidos() {
+        return ResponseEntity.ok(mapper.paraListaAlertasRespostaDto(leituraService.buscarAlertasNaoResolvidos()));
     }
 
     @PutMapping("/alertas/{id}/resolver")
@@ -127,7 +124,7 @@ public class LeituraSensoresController {
     @GetMapping("/estatisticas")
     @Operation(summary = "Indicadores operacionais do reservatório e da classificação de peças",
             description = "Sem 'inicio' e 'fim', considera todo o histórico persistido.")
-    public ResponseEntity<Map<String, Object>> estatisticasResumo(
+    public ResponseEntity<Map<String, Object>> obterEstatisticas(
             @RequestParam(name = "inicio", required = false) @DateTimeFormat(iso = ISO.DATE_TIME) Instant inicio,
             @RequestParam(name = "fim", required = false) @DateTimeFormat(iso = ISO.DATE_TIME) Instant fim) {
 

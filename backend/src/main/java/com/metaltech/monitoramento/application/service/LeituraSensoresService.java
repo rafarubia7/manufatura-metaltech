@@ -3,6 +3,7 @@ package com.metaltech.monitoramento.application.service;
 import java.time.Instant;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 
@@ -28,7 +29,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class LeituraSensoresService {
 
-    /** Alertas ligados ao nível do reservatório (os únicos que são deduplicados e resolvidos automaticamente). */
     static final Set<TipoAlerta> ALERTAS_RESERVATORIO = EnumSet.of(
             TipoAlerta.RESERVATORIO_BAIXO,
             TipoAlerta.RESERVATORIO_ALTO,
@@ -38,11 +38,8 @@ public class LeituraSensoresService {
     private final AlertaNivelRepository alertaRepository;
 
     /**
-     * Registra uma leitura da esteira aplicando as regras de negócio:
-     * 1. o status do reservatório é recalculado a partir do percentual (fonte única da regra 20/80/95);
-     * 2. alertas de reservatório que não refletem mais a condição atual são resolvidos automaticamente;
-     * 3. um novo alerta de reservatório só é aberto se não houver outro ativo do mesmo tipo no dispositivo;
-     * 4. conflito de sensores (AMBAS) sempre gera alerta, pois cada ocorrência é uma peça mal classificada.
+     * O status é sempre recalculado pelo percentual. Alertas de reservatório são únicos por tipo
+     * e dispositivo e se resolvem quando a condição muda; cada conflito AMBAS gera um alerta.
      */
     @Transactional
     public LeituraSensores salvarLeitura(LeituraSensores leitura) {
@@ -51,7 +48,7 @@ public class LeituraSensoresService {
         TipoAlerta alertaReservatorio = alertaParaStatus(leitura.getStatusReservatorio());
         resolverAlertasSuperados(leitura.getDispositivoId(), alertaReservatorio);
 
-        if (alertaReservatorio != null && !existeAlertaAtivo(alertaReservatorio, leitura.getDispositivoId())) {
+        if (alertaReservatorio != null && !alertaRepository.existeAtivo(alertaReservatorio, leitura.getDispositivoId())) {
             leitura.adicionarAlerta(criarAlerta(leitura, alertaReservatorio, mensagemReservatorio(leitura)));
         }
 
@@ -60,7 +57,6 @@ public class LeituraSensoresService {
                     "Conflito de sensores: indutivo e capacitivo detectaram a mesma peça"));
         }
 
-        // Alertas são persistidos em cascata junto com a leitura
         return leituraRepository.save(leitura);
     }
 
@@ -71,57 +67,57 @@ public class LeituraSensoresService {
 
     @Transactional(readOnly = true)
     public List<LeituraSensores> buscarPorPeriodo(Instant inicio, Instant fim) {
-        return leituraRepository.findByTimestampBetween(inicio, fim);
+        return leituraRepository.buscarPorPeriodo(inicio, fim);
     }
 
     @Transactional(readOnly = true)
     public List<LeituraSensores> buscarPorTipoPeca(TipoPeca tipo) {
-        return leituraRepository.findByTipoPeca(tipo);
+        return leituraRepository.buscarPorTipoPeca(tipo);
     }
 
     @Transactional(readOnly = true)
     public List<LeituraSensores> buscarPorStatusReservatorio(StatusReservatorio status) {
-        return leituraRepository.findByStatusReservatorio(status);
+        return leituraRepository.buscarPorStatusReservatorio(status);
     }
 
     @Transactional(readOnly = true)
-    public Page<LeituraSensores> listarTodas(Pageable pageable) {
-        return leituraRepository.findAllByOrderByTimestampDesc(pageable);
+    public Page<LeituraSensores> listarTodas(Pageable paginacao) {
+        return leituraRepository.listarMaisRecentes(paginacao);
     }
 
     @Transactional(readOnly = true)
-    public Page<LeituraSensores> findByTimestampAndTipoPeca(Instant inicio, Instant fim, TipoPeca tipo, Pageable pageable) {
-        return leituraRepository.findByTimestampAndTipoPeca(inicio, fim, tipo, pageable);
+    public Page<LeituraSensores> buscarPorPeriodo(Instant inicio, Instant fim, Pageable paginacao) {
+        return leituraRepository.buscarPorPeriodo(inicio, fim, paginacao);
     }
 
     @Transactional(readOnly = true)
-    public Page<LeituraSensores> findByTimestampAndStatusReservatorio(Instant inicio, Instant fim, StatusReservatorio status, Pageable pageable) {
-        return leituraRepository.findByTimestampAndStatusReservatorio(inicio, fim, status, pageable);
+    public Page<LeituraSensores> buscarPorPeriodoETipoPeca(Instant inicio, Instant fim, TipoPeca tipo, Pageable paginacao) {
+        return leituraRepository.buscarPorPeriodoETipoPeca(inicio, fim, tipo, paginacao);
     }
 
     @Transactional(readOnly = true)
-    public Page<LeituraSensores> findByTimestampBetween(Instant inicio, Instant fim, Pageable pageable) {
-        return leituraRepository.findByTimestampBetween(inicio, fim, pageable);
+    public Page<LeituraSensores> buscarPorPeriodoEStatusReservatorio(Instant inicio, Instant fim, StatusReservatorio status, Pageable paginacao) {
+        return leituraRepository.buscarPorPeriodoEStatusReservatorio(inicio, fim, status, paginacao);
     }
 
     @Transactional(readOnly = true)
-    public Page<LeituraSensores> findByTipoPeca(TipoPeca tipo, Pageable pageable) {
-        return leituraRepository.findByTipoPeca(tipo, pageable);
+    public Page<LeituraSensores> buscarPorTipoPeca(TipoPeca tipo, Pageable paginacao) {
+        return leituraRepository.buscarPorTipoPeca(tipo, paginacao);
     }
 
     @Transactional(readOnly = true)
-    public Page<LeituraSensores> findByStatusReservatorio(StatusReservatorio status, Pageable pageable) {
-        return leituraRepository.findByStatusReservatorio(status, pageable);
+    public Page<LeituraSensores> buscarPorStatusReservatorio(StatusReservatorio status, Pageable paginacao) {
+        return leituraRepository.buscarPorStatusReservatorio(status, paginacao);
     }
 
     @Transactional
-    public void deletarPorId(Long id) {
+    public void excluirPorId(Long id) {
         leituraRepository.deleteById(id);
     }
 
     @Transactional(readOnly = true)
     public List<AlertaNivel> buscarAlertasNaoResolvidos() {
-        return alertaRepository.findByResolvidoFalse();
+        return alertaRepository.buscarNaoResolvidos();
     }
 
     @Transactional
@@ -150,23 +146,17 @@ public class LeituraSensoresService {
         };
     }
 
-    /** Resolve os alertas de reservatório ativos cuja condição não se aplica mais à leitura atual. */
     private void resolverAlertasSuperados(String dispositivoId, TipoAlerta alertaAtual) {
         Set<TipoAlerta> superados = EnumSet.copyOf(ALERTAS_RESERVATORIO);
         if (alertaAtual != null) {
             superados.remove(alertaAtual);
         }
-        List<AlertaNivel> abertos = alertaRepository
-                .findByTipoAlertaInAndResolvidoFalseAndLeitura_DispositivoId(superados, dispositivoId);
-        abertos.forEach(AlertaNivel::marcarComoResolvido);
-    }
-
-    private boolean existeAlertaAtivo(TipoAlerta tipo, String dispositivoId) {
-        return alertaRepository.existsByTipoAlertaAndResolvidoFalseAndLeitura_DispositivoId(tipo, dispositivoId);
+        alertaRepository.buscarAtivosPorTipos(superados, dispositivoId)
+                .forEach(AlertaNivel::marcarComoResolvido);
     }
 
     private String mensagemReservatorio(LeituraSensores leitura) {
-        String nivel = String.format(java.util.Locale.ROOT, "%.2f%%", leitura.getNivelReservatorioPercentual());
+        String nivel = String.format(Locale.ROOT, "%.2f%%", leitura.getNivelReservatorioPercentual());
         return switch (leitura.getStatusReservatorio()) {
             case ALERTA_BAIXO -> "Nível do reservatório baixo: " + nivel;
             case ALERTA_ALTO -> "Nível do reservatório alto: " + nivel + " - programar esvaziamento";
@@ -175,9 +165,9 @@ public class LeituraSensoresService {
         };
     }
 
+    // O alerta herda o instante da leitura para manter o histórico coerente.
     private AlertaNivel criarAlerta(LeituraSensores leitura, TipoAlerta tipo, String mensagem) {
-        // O alerta herda o instante da leitura para manter o histórico coerente com o dado de origem
-        Instant instante = leitura.getTimestamp() != null ? leitura.getTimestamp() : Instant.now();
+        Instant instante = leitura.getDataHora() != null ? leitura.getDataHora() : Instant.now();
         return new AlertaNivel(leitura, instante, tipo, mensagem, false);
     }
 }

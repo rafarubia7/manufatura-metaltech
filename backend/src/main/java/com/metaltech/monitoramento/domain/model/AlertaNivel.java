@@ -1,19 +1,25 @@
 package com.metaltech.monitoramento.domain.model;
 
-import jakarta.persistence.*;
 import java.time.Instant;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "alertas_nivel", indexes = {
-    @Index(name = "idx_leitura_id", columnList = "leitura_id"),
-    @Index(name = "idx_tipo_alerta", columnList = "tipo_alerta"),
-    @Index(name = "idx_resolvido", columnList = "resolvido")
-})
+@Table(name = "alertas_nivel")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -29,7 +35,7 @@ public class AlertaNivel {
     private LeituraSensores leitura;
 
     @Column(name = "timestamp_alertado", nullable = false, updatable = false)
-    private Instant timestampAlertado;
+    private Instant dataHoraAlerta;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_alerta", nullable = false)
@@ -41,17 +47,15 @@ public class AlertaNivel {
     @Column(name = "resolvido", nullable = false)
     private Boolean resolvido = false;
 
-    // Métodos de conveniência
-    public void marcarComoResolvido() {
-        this.resolvido = true;
-    }
-
-    // Construtor para criação de alertas no service
-    public AlertaNivel(LeituraSensores leitura, Instant timestampAlertado, TipoAlerta tipoAlerta, String mensagem, Boolean resolvido) {
+    public AlertaNivel(LeituraSensores leitura, Instant dataHoraAlerta, TipoAlerta tipoAlerta, String mensagem, Boolean resolvido) {
         this.leitura = leitura;
-        this.timestampAlertado = timestampAlertado;
+        this.dataHoraAlerta = dataHoraAlerta;
         this.tipoAlerta = tipoAlerta;
         this.mensagem = mensagem;
         this.resolvido = resolvido;
+    }
+
+    public void marcarComoResolvido() {
+        this.resolvido = true;
     }
 }

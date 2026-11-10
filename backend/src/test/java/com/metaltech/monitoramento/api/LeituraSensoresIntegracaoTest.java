@@ -24,10 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metaltech.monitoramento.infrastructure.repository.AlertaNivelRepository;
 import com.metaltech.monitoramento.infrastructure.repository.LeituraSensoresRepository;
 
-/**
- * Fluxo completo sem mocks: HTTP -> controller -> service -> JPA -> banco (H2) -> resposta.
- * Garante que alertas são persistidos junto com a leitura, deduplicados e resolvidos automaticamente.
- */
+// Fluxo completo sem mocks: HTTP -> controller -> service -> JPA -> H2.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -54,8 +51,8 @@ class LeituraSensoresIntegracaoTest {
         base = Instant.parse("2026-11-03T08:00:00Z");
     }
 
-    private String payload(int minuto, String tipo, double percentual, String statusInformado) {
-        Instant ts = base.plusSeconds(60L * minuto);
+    private String corpoJson(int minuto, String tipo, double percentual, String statusInformado) {
+        Instant instante = base.plusSeconds(60L * minuto);
         boolean metal = tipo.equals("METALICA") || tipo.equals("AMBAS");
         boolean naoMetal = tipo.equals("NAO_METALICA") || tipo.equals("AMBAS");
         return """
@@ -69,8 +66,8 @@ class LeituraSensoresIntegracaoTest {
               "dispositivoId": "ESP32-001",
               "versaoFirmware": "1.0.0"
             }
-            """.formatted(ts, metal, metal ? 0.82 : 0.08, naoMetal, naoMetal ? 0.79 : 0.06,
-                minuto, tipo, ts, percentual, percentual, statusInformado);
+            """.formatted(instante, metal, metal ? 0.82 : 0.08, naoMetal, naoMetal ? 0.79 : 0.06,
+                minuto, tipo, instante, percentual, percentual, statusInformado);
     }
 
     private JsonNode postar(String json) throws Exception {
@@ -84,31 +81,28 @@ class LeituraSensoresIntegracaoTest {
 
     @Test
     void devePersistirLeituraCriticaComAlertaERecalcularStatus() throws Exception {
-        // Dispositivo informa NORMAL, mas 97% é crítico pela regra de negócio
-        JsonNode resposta = postar(payload(0, "METALICA", 97.0, "NORMAL"));
+        JsonNode resposta = postar(corpoJson(0, "METALICA", 97.0, "NORMAL"));
 
         assertThat(resposta.at("/nivelReservatorio/status").asText()).isEqualTo("CRITICO");
         assertThat(resposta.at("/alertas/0/tipoAlerta").asText()).isEqualTo("RESERVATORIO_CRITICO");
-        assertThat(resposta.at("/alertas/0/timestampAlertado").asText()).isEqualTo(base.toString());
+        assertThat(resposta.at("/alertas/0/dataHoraAlerta").asText()).isEqualTo(base.toString());
         assertThat(leituraRepository.count()).isEqualTo(1);
         assertThat(alertaRepository.count()).isEqualTo(1);
     }
 
     @Test
     void deveDeduplicarEResolverAlertasAoLongoDoCicloDoReservatorio() throws Exception {
-        postar(payload(0, "METALICA", 82.0, "ALERTA_ALTO"));
-        postar(payload(1, "METALICA", 84.0, "ALERTA_ALTO"));
-        postar(payload(2, "NAO_METALICA", 87.0, "ALERTA_ALTO"));
+        postar(corpoJson(0, "METALICA", 82.0, "ALERTA_ALTO"));
+        postar(corpoJson(1, "METALICA", 84.0, "ALERTA_ALTO"));
+        postar(corpoJson(2, "NAO_METALICA", 87.0, "ALERTA_ALTO"));
 
-        // Três leituras em faixa alta geram um único alerta ativo
         mockMvc.perform(get("/api/v1/leituras/alertas"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].tipoAlerta").value("RESERVATORIO_ALTO"))
                 .andExpect(jsonPath("$[0].dispositivoId").value("ESP32-001"));
 
-        // Esvaziamento: o nível volta ao normal e o alerta é resolvido automaticamente
-        postar(payload(3, "METALICA", 25.0, "NORMAL"));
+        postar(corpoJson(3, "METALICA", 25.0, "NORMAL"));
 
         mockMvc.perform(get("/api/v1/leituras/alertas"))
                 .andExpect(status().isOk())
@@ -118,8 +112,8 @@ class LeituraSensoresIntegracaoTest {
 
     @Test
     void deveGerarAlertaParaCadaConflitoDeSensores() throws Exception {
-        postar(payload(0, "AMBAS", 50.0, "NORMAL"));
-        postar(payload(1, "AMBAS", 50.5, "NORMAL"));
+        postar(corpoJson(0, "AMBAS", 50.0, "NORMAL"));
+        postar(corpoJson(1, "AMBAS", 50.5, "NORMAL"));
 
         mockMvc.perform(get("/api/v1/leituras/alertas"))
                 .andExpect(jsonPath("$", hasSize(2)))
@@ -128,7 +122,7 @@ class LeituraSensoresIntegracaoTest {
 
     @Test
     void devePermitirResolucaoManualDoAlerta() throws Exception {
-        JsonNode resposta = postar(payload(0, "METALICA", 10.0, "ALERTA_BAIXO"));
+        JsonNode resposta = postar(corpoJson(0, "METALICA", 10.0, "ALERTA_BAIXO"));
         long alertaId = resposta.at("/alertas/0/id").asLong();
 
         mockMvc.perform(put("/api/v1/leituras/alertas/" + alertaId + "/resolver"))
@@ -136,15 +130,15 @@ class LeituraSensoresIntegracaoTest {
         mockMvc.perform(put("/api/v1/leituras/alertas/999999/resolver"))
                 .andExpect(status().isNotFound());
 
-        assertThat(alertaRepository.countByResolvidoFalse()).isZero();
+        assertThat(alertaRepository.contarNaoResolvidos()).isZero();
     }
 
     @Test
     void deveCalcularEstatisticasSobreTodoOHistorico() throws Exception {
-        postar(payload(0, "METALICA", 30.0, "NORMAL"));
-        postar(payload(1, "METALICA", 40.0, "NORMAL"));
-        postar(payload(2, "NAO_METALICA", 50.0, "NORMAL"));
-        postar(payload(3, "AMBAS", 85.0, "ALERTA_ALTO"));
+        postar(corpoJson(0, "METALICA", 30.0, "NORMAL"));
+        postar(corpoJson(1, "METALICA", 40.0, "NORMAL"));
+        postar(corpoJson(2, "NAO_METALICA", 50.0, "NORMAL"));
+        postar(corpoJson(3, "AMBAS", 85.0, "ALERTA_ALTO"));
 
         mockMvc.perform(get("/api/v1/leituras/estatisticas"))
                 .andExpect(status().isOk())
@@ -163,12 +157,12 @@ class LeituraSensoresIntegracaoTest {
 
     @Test
     void deveListarLeiturasPaginadas() throws Exception {
-        postar(payload(0, "METALICA", 30.0, "NORMAL"));
-        postar(payload(1, "NAO_METALICA", 31.0, "NORMAL"));
+        postar(corpoJson(0, "METALICA", 30.0, "NORMAL"));
+        postar(corpoJson(1, "NAO_METALICA", 31.0, "NORMAL"));
 
         mockMvc.perform(get("/api/v1/leituras").param("size", "1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content", hasSize(1)))
-                .andExpect(jsonPath("$.totalElements").value(2));
+                .andExpect(jsonPath("$.conteudo", hasSize(1)))
+                .andExpect(jsonPath("$.totalElementos").value(2));
     }
 }
