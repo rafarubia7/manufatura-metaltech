@@ -9,7 +9,7 @@
     <artifactId>monitoramento-industrial</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <name>MetalTech Monitoramento Industrial</name>
-    <description>API REST para plataforma de monitoramento industrial com Realidade Aumentada</description>
+    <description>API REST de monitoramento da esteira de triagem MetalTech</description>
     <packaging>jar</packaging>
 
     <properties>
@@ -19,7 +19,7 @@
         <flyway.version>10.10.0</flyway.version>
         <postgresql.version>42.6.0</postgresql.version>
         <h2.version>2.2.224</h2.version>
-        <lombok.version>1.18.30</lombok.version>
+        <lombok.version>1.18.36</lombok.version>
         <validation.version>3.1.0</validation.version>
         <junit-jupiter.version>5.10.1</junit-jupiter.version>
     </properties>
@@ -69,6 +69,12 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
+            <version>${flyway.version}</version>
+        </dependency>
+        <!-- A partir do Flyway 10 o suporte ao PostgreSQL fica em módulo separado -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
             <version>${flyway.version}</version>
         </dependency>
 
@@ -124,7 +130,7 @@
                 </configuration>
             </plugin>
 
-            <!-- MapStruct Annotation Processor -->
+            <!-- Compilador Java com processador de anotações do Lombok -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

@@ -1,25 +1,31 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
   application:
     name: metaltech-monitoramento
   datasource:
-    url: jdbc:postgresql://localhost:5432/metaltech
-    username: metaltech
-    password: metaltech123
+    # Valores padrão para execução local; no Docker são sobrescritos por variáveis de ambiente
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/metaltech}
+    username: ${DB_USERNAME:metaltech}
+    password: ${DB_PASSWORD:metaltech123}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
       connection-timeout: 30000
   jpa:
+    # Mantido ativo: o mapper serializa a coleção de alertas (lazy) após o service
+    open-in-view: true
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        # Carrega alertas de várias leituras em uma única consulta (evita N+1 na listagem)
+        default_batch_fetch_size: 100
+        jdbc:
+          time_zone: UTC
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -30,17 +36,14 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,info,metrics
   endpoint:
     health:
       show-details: always
-    metrics:
-      enabled: true
 
 logging:
   level:
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.SQL: WARN
     com.metaltech.monitoramento: INFO
 
 springdoc:
@@ -50,5 +53,4 @@ springdoc:
     path: /swagger-ui.html
     operations-sorter: method
     tags-sorter: alpha
-    config-url: /v3/api-docs/swagger-config
     default-model-expand-depth: 2
