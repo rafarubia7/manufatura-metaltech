@@ -25,6 +25,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import jakarta.persistence.EntityNotFoundException;
+
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
@@ -32,7 +34,9 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -98,7 +102,7 @@ class LeituraSensoresControllerTest {
         mockMvc.perform(post("/api/v1/leituras")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(validDto)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.peca.tipo").value("METALICA"))
                 .andExpect(jsonPath("$.nivelReservatorio.status").value("NORMAL"));
@@ -164,7 +168,28 @@ class LeituraSensoresControllerTest {
 
         mockMvc.perform(get("/api/v1/leituras/alertas"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(1));
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].tipoAlerta").value("RESERVATORIO_ALTO"))
+                .andExpect(jsonPath("$[0].leituraId").value(1))
+                .andExpect(jsonPath("$[0].dispositivoId").value("ESP32-001"));
+    }
+
+    @Test
+    void deveRetornarBadRequestQuandoTipoPecaInvalido() throws Exception {
+        validDto.getPeca().setTipo("PLASTICO");
+
+        mockMvc.perform(post("/api/v1/leituras")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(validDto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void deveRetornarNotFoundAoResolverAlertaInexistente() throws Exception {
+        doThrow(new EntityNotFoundException("Alerta não encontrado: 99")).when(leituraService).resolverAlerta(99L);
+
+        mockMvc.perform(put("/api/v1/leituras/alertas/99/resolver"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -177,11 +202,17 @@ class LeituraSensoresControllerTest {
 
     @Test
     void deveRetornarEstatisticas() throws Exception {
-        when(estatisticasService.calcularEstatisticas(any(Instant.class), any(Instant.class)))
+        when(estatisticasService.calcularEstatisticas(isNull(), isNull()))
                 .thenReturn(Map.of("totalLeituras", 100, "totalMetalicas", 60, "totalNaoMetalicas", 40));
 
         mockMvc.perform(get("/api/v1/leituras/estatisticas"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalLeituras").value(100));
+    }
+
+    @Test
+    void deveRetornarBadRequestQuandoPeriodoIncompleto() throws Exception {
+        mockMvc.perform(get("/api/v1/leituras/estatisticas").param("inicio", Instant.now().toString()))
+                .andExpect(status().isBadRequest());
     }
 }
