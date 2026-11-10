@@ -1,0 +1,153 @@
+{
+  "url": "http://localhost:8080",
+  "leituras_ja_existentes_antes_do_envio": 0,
+  "envio": {
+    "enviadas": 9965,
+    "codigos_http": {
+      "201": 9965
+    },
+    "sucesso_pct": 100.0,
+    "duracao_s": 52.5,
+    "leituras_por_segundo": 189.9,
+    "status_reservatorio_divergente_do_csv": 0,
+    "exemplos_de_falha": []
+  },
+  "validacao": {
+    "aprovadas": 22,
+    "total": 22,
+    "checagens": [
+      {
+        "metrica": "total de leituras (GET /leituras)",
+        "local": 9965,
+        "api": 9965,
+        "ok": true
+      },
+      {
+        "metrica": "totalLeituras (estatísticas)",
+        "local": 9965,
+        "api": 9965,
+        "ok": true
+      },
+      {
+        "metrica": "totalMetalicas",
+        "local": 5999,
+        "api": 5999,
+        "ok": true
+      },
+      {
+        "metrica": "totalNaoMetalicas",
+        "local": 3303,
+        "api": 3303,
+        "ok": true
+      },
+      {
+        "metrica": "totalDesconhecidas",
+        "local": 613,
+        "api": 613,
+        "ok": true
+      },
+      {
+        "metrica": "totalAmbas",
+        "local": 50,
+        "api": 50,
+        "ok": true
+      },
+      {
+        "metrica": "média do nível",
+        "local": 48.771,
+        "api": 48.771,
+        "ok": true
+      },
+      {
+        "metrica": "mediana do nível",
+        "local": 47.94,
+        "api": 47.94,
+        "ok": true
+      },
+      {
+        "metrica": "desvio padrão do nível (amostral)",
+        "local": 23.6377,
+        "api": 23.6377,
+        "ok": true
+      },
+      {
+        "metrica": "Q1 do nível",
+        "local": 28.8,
+        "api": 28.8,
+        "ok": true
+      },
+      {
+        "metrica": "Q3 do nível",
+        "local": 68.0,
+        "api": 68.0,
+        "ok": true
+      },
+      {
+        "metrica": "mínimo do nível",
+        "local": 0.37,
+        "api": 0.37,
+        "ok": true
+      },
+      {
+        "metrica": "máximo do nível",
+        "local": 100.0,
+        "api": 100.0,
+        "ok": true
+      },
+      {
+        "metrica": "leituras com status NORMAL",
+        "local": 7544,
+        "api": 7544,
+        "ok": true
+      },
+      {
+        "metrica": "leituras com status ALERTA_BAIXO",
+        "local": 1346,
+        "api": 1346,
+        "ok": true
+      },
+      {
+        "metrica": "leituras com status ALERTA_ALTO",
+        "local": 857,
+        "api": 857,
+        "ok": true
+      },
+      {
+        "metrica": "leituras com status CRITICO",
+        "local": 218,
+        "api": 218,
+        "ok": true
+      },
+      {
+        "metrica": "alertas gerados RESERVATORIO_BAIXO",
+        "local": 46,
+        "api": 46,
+        "ok": true
+      },
+      {
+        "metrica": "alertas gerados RESERVATORIO_ALTO",
+        "local": 44,
+        "api": 44,
+        "ok": true
+      },
+      {
+        "metrica": "alertas gerados RESERVATORIO_CRITICO",
+        "local": 7,
+        "api": 7,
+        "ok": true
+      },
+      {
+        "metrica": "alertas gerados CONTAGEM_ANOMALA",
+        "local": 50,
+        "api": 50,
+        "ok": true
+      },
+      {
+        "metrica": "alertas ativos (GET /alertas)",
+        "local": 50,
+        "api": 50,
+        "ok": true
+      }
+    ]
+  }
+}
