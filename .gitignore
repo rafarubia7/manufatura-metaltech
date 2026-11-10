@@ -3,6 +3,7 @@
 # ==========================================
 *.md
 !README.md
+!docs/*.md
 
 # ==========================================
 # JAVA / SPRING BOOT / MAVEN
@@ -47,6 +48,9 @@ wheels/
 .ipynb_checkpoints/
 venv/
 .venv/
+
+# Resultados gerados a partir do banco local (variam com o estado da base)
+dados/resultados/*_api.*
 
 # ==========================================
 # AMBIENTE E SEGURANÇA
