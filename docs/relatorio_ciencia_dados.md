@@ -14,7 +14,7 @@ Principais conclusões:
 - O reservatório fica **75,2% do tempo em faixa normal** e **1,9% em faixa crítica**. Houve **3 episódios de transbordo** (nível em 100%).
 - O turno T1, apesar de reagir mais rápido aos alertas, é o que mais tempo passa em nível crítico (**2,83%**, contra 1,48% em T2 e 1,49% em T3). A causa é a taxa de enchimento mais alta. Isso indica que o limiar fixo de 80% para acionar o esvaziamento é insuficiente nos horários de pico.
 - **6,15% das peças** saem como DESCONHECIDA, e 79% delas passaram a mais de 12 cm dos sensores. É um problema de alinhamento mecânico, não de sensor.
-- Os detectores por regra identificaram **100%** dos episódios de falha de conexão, deriva do capacitivo e esvaziamento brusco. O IQR de throughput encontrou **15 de 17** gargalos.
+- Os detectores por regra identificaram **100%** dos episódios de falha de conexão, deriva do capacitivo e esvaziamento brusco. O IQR da vazão de peças encontrou **15 de 17** gargalos.
 - A regra de alerta do back-end produz ~21 alertas por dia. Quase metade são de **reservatório baixo** ao fim de cada esvaziamento, que é um evento esperado e gera ruído para o operador.
 
 ---
@@ -26,7 +26,7 @@ A esteira de triagem separa peças metálicas e não metálicas usando três sen
 O objetivo desta etapa é:
 
 1. produzir um dataset sintético **reproduzível e plausível**, com padrões operacionais (e não ruído aleatório);
-2. descrever estatisticamente o processo (nível, sensores, throughput, classificação);
+2. descrever estatisticamente o processo (nível, sensores, vazão de peças, classificação);
 3. identificar outliers e interpretar o que cada um significa para a operação;
 4. relacionar os achados com os alertas do sistema;
 5. validar a integração da CIDA com a API REST.
@@ -64,7 +64,7 @@ Cada linha do dataset é uma peça passando pela estação de sensores. A simula
 - **Tempo em cada status:** cada leitura é ponderada pelo intervalo até a próxima. Isso evita superestimar períodos de produção intensa, que têm mais leituras por minuto.
 - **Taxa de variação do nível:** inclinação em %/min dentro de uma janela móvel de 3 min, usando apenas leituras dentro da janela.
 - **Ciclos do reservatório:** máquina de estados pico → vale com histerese (queda mínima de 25 pontos). Ela identificou 44 ciclos, exatamente o número de aberturas reais da comporta na simulação.
-- **Outliers:** regras de negócio (R1–R4) do plano técnico, IQR do throughput em janelas de 10 min (por turno) e z-score robusto (mediana/MAD) da taxa de variação.
+- **Outliers:** regras de negócio (R1–R4) do plano técnico, IQR da vazão de peças em janelas de 10 min (por turno) e z-score robusto (mediana/MAD) da taxa de variação.
 - **Avaliação:** precisão por leitura e recall por episódio, comparados com `evento_simulado`.
 
 ---
@@ -139,7 +139,7 @@ A correlação entre distância e intensidade é forte e negativa: **r = −0,89
 
 ![Distância x intensidade](../dados/graficos/09_dispersao_distancia_intensidade.png)
 
-### 4.5 Throughput e turnos
+### 4.5 Vazão de peças e turnos
 
 | Turno | Leituras | Peças/hora (média ± desvio) | Nível médio | % do tempo crítico |
 |---|---|---|---|---|
@@ -147,8 +147,8 @@ A correlação entre distância e intensidade é forte e negativa: **r = −0,89
 | T2 (14–22h) | 3.701 | 66,1 ± 10,8 | 47,6% | 1,48% |
 | T3 (22–06h) | 1.989 | 35,5 ± 7,0 | 48,3% | 1,49% |
 
-![Throughput horário](../dados/graficos/03_serie_temporal_throughput_tipo.png)
-![Throughput por turno](../dados/graficos/06_boxplot_throughput_por_turno.png)
+![Vazão horária](../dados/graficos/03_serie_temporal_vazao_tipo.png)
+![Vazão por turno](../dados/graficos/06_boxplot_vazao_por_turno.png)
 ![Nível por turno](../dados/graficos/05_boxplot_nivel_por_turno.png)
 
 ---
@@ -194,8 +194,8 @@ Durante os atolamentos o nível fica parado (platôs horizontais na série). Qua
 | R2 — esvaziamento > 3%/min | 24 | Esvaziamento brusco | 79,2% | 3 / 3 |
 | R3 — indutivo **e** capacitivo < 0,10 | 61 | Falha de conexão | 100% | 7 / 7 |
 | R4 — tipo AMBAS | 50 | Deriva do capacitivo | 100% | 2 / 2 |
-| IQR throughput alto (10 min) | 25 janelas | Rajada pós-gargalo | 54,6%* | 13 / 16 |
-| IQR throughput baixo (10 min) | 34 janelas | Gargalo | 88,2% | 15 / 17 |
+| IQR vazão alta (10 min) | 25 janelas | Rajada pós-gargalo | 54,6%* | 13 / 16 |
+| IQR vazão baixa (10 min) | 34 janelas | Gargalo | 88,2% | 15 / 17 |
 | Z robusto da taxa (\|z\| > 3,5) | 1.528 | Rajada ou esvaziamento brusco | 11,4% | — |
 
 \* Precisão por leitura: a janela de 10 min também inclui peças normais antes e depois da rajada.
@@ -208,7 +208,7 @@ Durante os atolamentos o nível fica parado (platôs horizontais na série). Qua
 | **Esvaziamento > 3%/min (R2)** | Descarga fora do procedimento: comporta forçada ou retirada manual. Os 20,8% de "falsos positivos" são leituras logo após o evento, ainda dentro da janela de 3 min. | Registrar quem descarregou e por quê; checar travamento da comporta. |
 | **Sinal nulo nos dois sensores (R3)** | Falha elétrica: cabo, conector ou alimentação. É diferente de peça fora de alcance, que mantém sinal residual de 0,2 a 0,4. | Manutenção imediata do chicote dos sensores. Cada minuto de falha classifica peças como DESCONHECIDA. |
 | **Conflito AMBAS (R4)** | Deriva de sensibilidade do capacitivo, que passa a responder a metal. Na simulação, os 50 conflitos se concentram em 2 janelas. Concentração temporal de AMBAS indica descalibração, não acaso. | Recalibrar o capacitivo quando surgirem 3 ou mais conflitos em 30 min. |
-| **Throughput baixo (IQR)** | Esteira parada ou alimentação interrompida. Os gargalos somaram 7,7 h na semana (**4,6% do tempo disponível**). | Indicador de disponibilidade (OEE); investigar causas recorrentes de atolamento. |
+| **Vazão baixa (IQR)** | Esteira parada ou alimentação interrompida. Os gargalos somaram 7,7 h na semana (**4,6% do tempo disponível**). | Indicador de disponibilidade (OEE); investigar causas recorrentes de atolamento. |
 | **Z robusto** | Sem contexto de processo, o método estatístico marca também os esvaziamentos **legítimos**, que são raros mas normais. | Usar só como triagem; a decisão operacional deve vir das regras R1–R4. |
 
 **Observação metodológica:** o plano técnico propunha "intensidade < 0,10" como sinal de falha de conexão. Aplicada a um sensor isolado, essa regra marcaria toda peça não metálica, porque o indutivo fica naturalmente perto de zero nesses casos. A regra adotada exige **os dois sensores** sem sinal ao mesmo tempo.

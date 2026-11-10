@@ -66,6 +66,8 @@ Detalhes e solução de problemas em [docs/guia_execucao.md](docs/guia_execucao.
 | PUT | `/api/v1/leituras/alertas/{id}/resolver` | Resolve um alerta (204; 404 se não existir) |
 | GET | `/api/v1/leituras/estatisticas` | Indicadores do período (`inicio`/`fim`) ou de todo o histórico |
 
+A listagem paginada responde com `conteudo`, `paginacao`, `totalElementos`, `totalPaginas`, `primeira`, `ultima` e `quantidadeElementos`. Os parâmetros de paginação seguem o padrão do Spring (`page`, `size`, `sort=dataHora,asc`). Erros seguem o formato `{dataHora, codigoErro, mensagem, caminho, detalhes}`.
+
 Documentação interativa: http://localhost:8080/swagger-ui.html
 
 ## Regras de negócio
