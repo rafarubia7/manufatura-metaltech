@@ -234,7 +234,7 @@
     "parametros": {
       "mediana_taxa": 0.506,
       "mad_escalado": 0.4388,
-      "limites_iqr_throughput_10min": {
+      "limites_iqr_vazao_10min": {
         "T1": {
           "q1": 10.0,
           "q3": 15.0,
@@ -261,12 +261,12 @@
       "R3_sinal_nulo_nos_sensores": 61,
       "R4_conflito_ambas": 50,
       "Z_taxa_nivel_robusto": 1528,
-      "IQR_throughput_alto": 562
+      "IQR_vazao_alta": 562
     },
     "leituras_com_algum_sinal": 2003,
-    "janelas_10min_throughput": {
-      "baixo": 34,
-      "alto": 25,
+    "janelas_10min_vazao": {
+      "baixa": 34,
+      "alta": 25,
       "total_janelas": 1008
     }
   },
@@ -303,7 +303,7 @@
       "episodios_detectados": 2,
       "recall_episodios_pct": 100.0
     },
-    "IQR_throughput_alto": {
+    "IQR_vazao_alta": {
       "evento_alvo": "RAJADA_POS_GARGALO",
       "leituras_sinalizadas": 562,
       "precisao_pct": 54.6,
@@ -317,7 +317,7 @@
       "precisao_pct": 11.4,
       "observacao": "sinaliza também esvaziamentos controlados (variação legítima, porém rara)"
     },
-    "IQR_throughput_baixo": {
+    "IQR_vazao_baixa": {
       "evento_alvo": "GARGALO",
       "janelas_sinalizadas": 34,
       "precisao_pct": 88.2,

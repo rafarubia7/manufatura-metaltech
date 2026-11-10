@@ -1,12 +1,8 @@
 """
-Integração CIDA -> API REST do MetalTech.
+Envia o dataset sintético para a API (POST /api/v1/leituras) e confronta os indicadores
+da API com os calculados pelo pandas. Resultado em dados/resultados/validacao_integracao.json.
 
-Lê o dataset sintético, envia cada leitura via POST /api/v1/leituras no contrato
-definido no plano de ação técnico (seção 1) e, ao final, confronta os indicadores
-devolvidos pela API (GET /estatisticas, /alertas, /leituras) com os calculados
-localmente pelo pandas. O resultado fica em dados/resultados/validacao_integracao.json.
-
-Pré-requisito: backend rodando (ver docs/guia_execucao.md) com o banco vazio.
+Pré-requisito: backend rodando com o banco vazio (docs/guia_execucao.md).
 
 Uso:
     python enviar_para_api.py
@@ -28,23 +24,24 @@ import requests
 from analise_estatistica import simular_alertas
 
 PASTA = Path(__file__).resolve().parent
-TOLERANCIA = 0.01  # diferença absoluta aceita nas métricas de ponto flutuante
+TOLERANCIA = 0.01
 
 
-def montar_payload(linha: pd.Series, indice: int) -> dict:
-    ts = pd.Timestamp(linha["timestamp"]).tz_convert("UTC")
-    ts_iso = ts.strftime("%Y-%m-%dT%H:%M:%SZ")
+def montar_corpo_requisicao(linha: pd.Series, indice: int) -> dict:
+    instante = pd.Timestamp(linha["timestamp"]).tz_convert("UTC")
+    instante_iso = instante.strftime("%Y-%m-%dT%H:%M:%SZ")
     sem_sinal = linha["indutivo_intensidade"] < 0.1 and linha["capacitivo_intensidade"] < 0.1
     status_sensor = "SEM_SINAL" if sem_sinal else "OK"
     nivel = float(linha["nivel_reservatorio_percentual"])
     return {
-        "timestamp": ts_iso,
+        "timestamp": instante_iso,
         "sensorDistancia": {"valor": float(linha["distancia_cm"]), "unidade": "cm", "status": "OK"},
         "sensorIndutivo": {"detectouMetal": bool(linha["indutivo_detectou_metal"]),
                            "intensidade": float(linha["indutivo_intensidade"]), "status": status_sensor},
         "sensorCapacitivo": {"detectouNaoMetal": bool(linha["capacitivo_detectou_nao_metal"]),
                              "intensidade": float(linha["capacitivo_intensidade"]), "status": status_sensor},
-        "peca": {"id": f"peca-{ts:%Y%m%d-%H%M%S}-{indice:05d}", "tipo": linha["tipo_peca"], "timestampDetectado": ts_iso},
+        "peca": {"id": f"peca-{instante:%Y%m%d-%H%M%S}-{indice:05d}", "tipo": linha["tipo_peca"],
+                 "timestampDetectado": instante_iso},
         "nivelReservatorio": {"nivelAtual": nivel, "capacidadeMaxima": 100.0, "percentual": nivel,
                               "status": linha["status_reservatorio"]},
         "dispositivoId": linha["dispositivo_id"],
@@ -57,27 +54,27 @@ def enviar(sessao: requests.Session, url: str, df: pd.DataFrame, atraso: float) 
     falhas = []
     divergencias_status = 0
     inicio = time.perf_counter()
-    for i, (_, linha) in enumerate(df.iterrows()):
+    for indice, (_, linha) in enumerate(df.iterrows()):
         try:
-            r = sessao.post(f"{url}/api/v1/leituras", json=montar_payload(linha, i), timeout=30)
-            codigos[r.status_code] += 1
-            if r.status_code == 201:
-                if r.json()["nivelReservatorio"]["status"] != linha["status_reservatorio"]:
+            resposta = sessao.post(f"{url}/api/v1/leituras", json=montar_corpo_requisicao(linha, indice), timeout=30)
+            codigos[resposta.status_code] += 1
+            if resposta.status_code == 201:
+                if resposta.json()["nivelReservatorio"]["status"] != linha["status_reservatorio"]:
                     divergencias_status += 1
             elif len(falhas) < 10:
-                falhas.append({"indice": i, "status": r.status_code, "corpo": r.text[:300]})
-        except requests.RequestException as e:
+                falhas.append({"indice": indice, "status": resposta.status_code, "corpo": resposta.text[:300]})
+        except requests.RequestException as erro:
             codigos["erro_conexao"] += 1
             if len(falhas) < 10:
-                falhas.append({"indice": i, "erro": str(e)})
-        if (i + 1) % 1000 == 0 or i + 1 == len(df):
-            print(f"  {i + 1}/{len(df)} enviadas ({time.perf_counter() - inicio:.0f}s)")
+                falhas.append({"indice": indice, "erro": str(erro)})
+        if (indice + 1) % 1000 == 0 or indice + 1 == len(df):
+            print(f"  {indice + 1}/{len(df)} enviadas ({time.perf_counter() - inicio:.0f}s)")
         if atraso:
             time.sleep(atraso)
     duracao = time.perf_counter() - inicio
     return {
         "enviadas": len(df),
-        "codigos_http": {str(k): v for k, v in codigos.items()},
+        "codigos_http": {str(codigo): quantidade for codigo, quantidade in codigos.items()},
         "sucesso_pct": round(100 * codigos.get(201, 0) / len(df), 2),
         "duracao_s": round(duracao, 1),
         "leituras_por_segundo": round(len(df) / duracao, 1),
@@ -88,78 +85,83 @@ def enviar(sessao: requests.Session, url: str, df: pd.DataFrame, atraso: float) 
 
 def comparar(nome: str, local, api, tolerancia: float = 0.0) -> dict:
     if isinstance(local, (int, float)) and isinstance(api, (int, float)):
-        ok = abs(float(local) - float(api)) <= tolerancia
+        aprovado = abs(float(local) - float(api)) <= tolerancia
     else:
-        ok = local == api
-    return {"metrica": nome, "local": local, "api": api, "ok": bool(ok)}
+        aprovado = local == api
+    return {"metrica": nome, "local": local, "api": api, "ok": bool(aprovado)}
+
+
+def total_na_api(sessao: requests.Session, url: str, timeout: int = 60) -> int:
+    return sessao.get(f"{url}/api/v1/leituras", params={"size": 1}, timeout=timeout).json()["totalElementos"]
 
 
 def validar(sessao: requests.Session, url: str, df: pd.DataFrame) -> list[dict]:
-    est = sessao.get(f"{url}/api/v1/leituras/estatisticas", timeout=120).json()
+    estatisticas = sessao.get(f"{url}/api/v1/leituras/estatisticas", timeout=120).json()
     alertas_api = sessao.get(f"{url}/api/v1/leituras/alertas", timeout=60).json()
-    total_api = sessao.get(f"{url}/api/v1/leituras", params={"size": 1}, timeout=60).json()["totalElements"]
+    total_api = total_na_api(sessao, url)
 
     nivel = df["nivel_reservatorio_percentual"]
     tipos = df["tipo_peca"].value_counts()
     status = df["status_reservatorio"].value_counts()
-    prep = df.assign(timestamp=pd.to_datetime(df["timestamp"], utc=True, format="ISO8601"))
-    alertas_local = simular_alertas(prep.sort_values("timestamp", kind="stable"))
+    ordenado = df.assign(timestamp=pd.to_datetime(df["timestamp"], utc=True, format="ISO8601"))
+    alertas_local = simular_alertas(ordenado.sort_values("timestamp", kind="stable"))
 
     checagens = [
         comparar("total de leituras (GET /leituras)", len(df), total_api),
-        comparar("totalLeituras (estatísticas)", len(df), est["totalLeituras"]),
-        comparar("totalMetalicas", int(tipos.get("METALICA", 0)), est["totalMetalicas"]),
-        comparar("totalNaoMetalicas", int(tipos.get("NAO_METALICA", 0)), est["totalNaoMetalicas"]),
-        comparar("totalDesconhecidas", int(tipos.get("DESCONHECIDA", 0)), est["totalDesconhecidas"]),
-        comparar("totalAmbas", int(tipos.get("AMBAS", 0)), est["totalAmbas"]),
-        comparar("média do nível", round(nivel.mean(), 4), round(est["mediaNivelReservatorio"], 4), TOLERANCIA),
-        comparar("mediana do nível", round(nivel.median(), 4), round(est["medianaNivelReservatorio"], 4), TOLERANCIA),
-        comparar("desvio padrão do nível (amostral)", round(nivel.std(), 4), round(est["desvioPadraoNivelReservatorio"], 4), TOLERANCIA),
-        comparar("Q1 do nível", round(nivel.quantile(0.25), 4), round(est["quartil1NivelReservatorio"], 4), TOLERANCIA),
-        comparar("Q3 do nível", round(nivel.quantile(0.75), 4), round(est["quartil3NivelReservatorio"], 4), TOLERANCIA),
-        comparar("mínimo do nível", float(nivel.min()), est["minimoNivelReservatorio"], TOLERANCIA),
-        comparar("máximo do nível", float(nivel.max()), est["maximoNivelReservatorio"], TOLERANCIA),
+        comparar("totalLeituras (estatísticas)", len(df), estatisticas["totalLeituras"]),
+        comparar("totalMetalicas", int(tipos.get("METALICA", 0)), estatisticas["totalMetalicas"]),
+        comparar("totalNaoMetalicas", int(tipos.get("NAO_METALICA", 0)), estatisticas["totalNaoMetalicas"]),
+        comparar("totalDesconhecidas", int(tipos.get("DESCONHECIDA", 0)), estatisticas["totalDesconhecidas"]),
+        comparar("totalAmbas", int(tipos.get("AMBAS", 0)), estatisticas["totalAmbas"]),
+        comparar("média do nível", round(nivel.mean(), 4), round(estatisticas["mediaNivelReservatorio"], 4), TOLERANCIA),
+        comparar("mediana do nível", round(nivel.median(), 4), round(estatisticas["medianaNivelReservatorio"], 4), TOLERANCIA),
+        comparar("desvio padrão do nível (amostral)", round(nivel.std(), 4),
+                 round(estatisticas["desvioPadraoNivelReservatorio"], 4), TOLERANCIA),
+        comparar("Q1 do nível", round(nivel.quantile(0.25), 4), round(estatisticas["quartil1NivelReservatorio"], 4), TOLERANCIA),
+        comparar("Q3 do nível", round(nivel.quantile(0.75), 4), round(estatisticas["quartil3NivelReservatorio"], 4), TOLERANCIA),
+        comparar("mínimo do nível", float(nivel.min()), estatisticas["minimoNivelReservatorio"], TOLERANCIA),
+        comparar("máximo do nível", float(nivel.max()), estatisticas["maximoNivelReservatorio"], TOLERANCIA),
     ]
     for s in ["NORMAL", "ALERTA_BAIXO", "ALERTA_ALTO", "CRITICO"]:
         checagens.append(comparar(f"leituras com status {s}", int(status.get(s, 0)),
-                                  est["distribuicaoStatusReservatorio"][s]["quantidade"]))
-    for tipo, qtd in alertas_local["alertas_por_tipo"].items():
-        checagens.append(comparar(f"alertas gerados {tipo}", qtd, est["alertasPorTipo"][tipo]))
+                                  estatisticas["distribuicaoStatusReservatorio"][s]["quantidade"]))
+    for tipo, quantidade in alertas_local["alertas_por_tipo"].items():
+        checagens.append(comparar(f"alertas gerados {tipo}", quantidade, estatisticas["alertasPorTipo"][tipo]))
     ativos_esperados = alertas_local["alertas_ativos_ao_final"] + alertas_local["alertas_por_tipo"]["CONTAGEM_ANOMALA"]
     checagens.append(comparar("alertas ativos (GET /alertas)", ativos_esperados, len(alertas_api)))
     return checagens
 
 
-def main() -> None:
+def principal() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
-    parser = argparse.ArgumentParser(description="Envia o dataset sintético para a API e valida a integração")
-    parser.add_argument("--csv", type=Path, default=PASTA / "leituras_simuladas.csv")
-    parser.add_argument("--url", default="http://localhost:8080")
-    parser.add_argument("--limite", type=int, default=None, help="envia apenas as N primeiras leituras")
-    parser.add_argument("--atraso", type=float, default=0.0, help="pausa em segundos entre requisições")
-    args = parser.parse_args()
+    analisador = argparse.ArgumentParser(description="Envia o dataset sintético para a API e valida a integração")
+    analisador.add_argument("--csv", type=Path, default=PASTA / "leituras_simuladas.csv")
+    analisador.add_argument("--url", default="http://localhost:8080")
+    analisador.add_argument("--limite", type=int, default=None, help="envia apenas as N primeiras leituras")
+    analisador.add_argument("--atraso", type=float, default=0.0, help="pausa em segundos entre requisições")
+    argumentos = analisador.parse_args()
 
-    df = pd.read_csv(args.csv)
-    if args.limite:
-        df = df.head(args.limite)
+    df = pd.read_csv(argumentos.csv)
+    if argumentos.limite:
+        df = df.head(argumentos.limite)
 
     sessao = requests.Session()
     try:
-        existentes = sessao.get(f"{args.url}/api/v1/leituras", params={"size": 1}, timeout=10).json()["totalElements"]
-    except requests.RequestException as e:
-        sys.exit(f"API indisponível em {args.url}: {e}\nSuba o backend antes (docs/guia_execucao.md).")
+        existentes = total_na_api(sessao, argumentos.url, timeout=10)
+    except requests.RequestException as erro:
+        sys.exit(f"API indisponível em {argumentos.url}: {erro}\nSuba o backend antes (docs/guia_execucao.md).")
     if existentes:
         print(f"ATENÇÃO: o banco já tem {existentes} leituras; a validação compara o total e vai acusar diferença.\n"
               "Para recomeçar do zero: docker compose down -v && docker compose up -d postgres")
 
-    print(f"Enviando {len(df)} leituras para {args.url} ...")
-    envio = enviar(sessao, args.url, df, args.atraso)
+    print(f"Enviando {len(df)} leituras para {argumentos.url} ...")
+    envio = enviar(sessao, argumentos.url, df, argumentos.atraso)
     print(f"Envio concluído: {envio['codigos_http']} em {envio['duracao_s']}s ({envio['leituras_por_segundo']} leituras/s)")
 
-    checagens = validar(sessao, args.url, df)
+    checagens = validar(sessao, argumentos.url, df)
     aprovadas = sum(c["ok"] for c in checagens)
     resultado = {
-        "url": args.url,
+        "url": argumentos.url,
         "leituras_ja_existentes_antes_do_envio": existentes,
         "envio": envio,
         "validacao": {"aprovadas": aprovadas, "total": len(checagens), "checagens": checagens},
@@ -176,4 +178,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    principal()

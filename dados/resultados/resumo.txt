@@ -11,8 +11,8 @@ Status (% do tempo): ALERTA_BAIXO 14.44%, NORMAL 75.15%, ALERTA_ALTO 8.48%, CRIT
 Por turno: T1: 76.339 peças/h, crítico 2.83% do tempo | T2: 66.089 peças/h, crítico 1.48% do tempo | T3: 35.518 peças/h, crítico 1.49% do tempo
 Ciclos de esvaziamento: {'quantidade': 44, 'por_dia': 6.29, 'duracao_media_esvaziamento_min': 45.9, 'tempo_medio_enchimento_min': 179.7, 'tempo_mediano_enchimento_min': 164.2, 'nivel_medio_no_inicio_do_esvaziamento': 84.0, 'nivel_medio_ao_fim_do_esvaziamento': 9.27, 'esvaziamentos_iniciados_acima_de_95pct': 7, 'esvaziamentos_iniciados_abaixo_de_80pct': 8}
 
-Outliers por detector: R1_enchimento_acima_5pct_min=97, R2_esvaziamento_acima_3pct_min=24, R3_sinal_nulo_nos_sensores=61, R4_conflito_ambas=50, Z_taxa_nivel_robusto=1528, IQR_throughput_alto=562
-Janelas de throughput (10 min): {'baixo': 34, 'alto': 25, 'total_janelas': 1008}
+Outliers por detector: R1_enchimento_acima_5pct_min=97, R2_esvaziamento_acima_3pct_min=24, R3_sinal_nulo_nos_sensores=61, R4_conflito_ambas=50, Z_taxa_nivel_robusto=1528, IQR_vazao_alta=562
+Janelas de vazão (10 min): {'baixa': 34, 'alta': 25, 'total_janelas': 1008}
 
 Alertas que o backend deve gerar: {'RESERVATORIO_BAIXO': 46, 'RESERVATORIO_ALTO': 44, 'RESERVATORIO_CRITICO': 7, 'CONTAGEM_ANOMALA': 50}
 
@@ -21,6 +21,6 @@ Avaliação contra a verdade-terreno da simulação:
   R2_esvaziamento_acima_3pct_min: precisão 79.2% | episódios detectados 3/3
   R3_sinal_nulo_nos_sensores: precisão 100.0% | episódios detectados 7/7
   R4_conflito_ambas: precisão 100.0% | episódios detectados 2/2
-  IQR_throughput_alto: precisão 54.6% | episódios detectados 13/16
+  IQR_vazao_alta: precisão 54.6% | episódios detectados 13/16
   Z_taxa_nivel_robusto: precisão 11.4% | episódios detectados -/-
-  IQR_throughput_baixo: precisão 88.2% | episódios detectados 15/17
+  IQR_vazao_baixa: precisão 88.2% | episódios detectados 15/17
