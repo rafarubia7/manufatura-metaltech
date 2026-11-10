@@ -1,0 +1,428 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+/* ==========================================================================
+   MetalTech — Design System
+   ========================================================================== */
+
+:root {
+  /* Superfícies */
+  --bg-page: #fafafa;
+  --bg-card: #ffffff;
+  --bg-subtle: #f4f4f5;
+
+  /* Bordas */
+  --border: #eaeaea;
+  --border-strong: #d4d4d8;
+
+  /* Texto */
+  --text-strong: #18181b;
+  --text: #3f3f46;
+  --text-muted: #71717a;
+  --text-faint: #a1a1aa;
+
+  /* Cores de marca / dados */
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-soft: #eff4ff;
+  --neutral-data: #a1a1aa;
+
+  /* Estados */
+  --success: #16a34a;
+  --success-soft: #ecfdf3;
+  --warning: #d97706;
+  --warning-soft: #fffaeb;
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+
+  /* Forma */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+
+  /* Elevação (só no hover) */
+  --shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.05);
+
+  /* Tipografia */
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Altura padrão de painéis de gráfico/indicador */
+  --panel-height: 300px;
+}
+
+/* ---------- Base ---------- */
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-page);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.55;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-strong);
+  font-family: var(--font);
+  letter-spacing: -0.015em;
+}
+
+h1 { font-size: 1.75rem; font-weight: 600; }
+h2 { font-size: 1.375rem; font-weight: 600; }
+h3 { font-size: 1.125rem; font-weight: 600; }
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover { color: var(--accent-hover); }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+}
+
+/* Container principal do dashboard */
+.container,
+.container-fluid {
+  max-width: 1200px;
+  padding-top: 32px;
+  padding-bottom: 48px;
+}
+
+/* ---------- Navbar ---------- */
+
+.navbar {
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--border);
+  box-shadow: none !important;
+  padding: 12px 0;
+}
+
+.navbar-brand {
+  color: var(--text-strong) !important;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.navbar .nav-link {
+  color: var(--text-muted) !important;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  padding: 6px 12px !important;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.navbar .nav-link:hover,
+.navbar .nav-link.active {
+  color: var(--text-strong) !important;
+  background-color: var(--bg-subtle);
+}
+
+/* ---------- Cartões ---------- */
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: none;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-hover);
+}
+
+.card-body {
+  padding: 24px;
+}
+
+.card-title {
+  margin: 0 0 8px;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.card-text {
+  color: var(--text-strong);
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.card-header,
+.card-footer {
+  background: transparent;
+  border-color: var(--border);
+}
+
+/* Remove sombras pesadas herdadas do Bootstrap */
+.shadow,
+.shadow-sm,
+.shadow-lg {
+  box-shadow: none !important;
+}
+
+/* ---------- Títulos de seção ---------- */
+
+.section-title {
+  margin: 0 0 12px;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+/* Neutraliza utilitários de cor do Bootstrap */
+.text-secondary { color: var(--text-muted) !important; }
+.text-muted { color: var(--text-muted) !important; }
+.text-primary { color: var(--accent) !important; }
+.text-warning { color: var(--warning) !important; }
+.text-success { color: var(--success) !important; }
+.text-danger { color: var(--danger) !important; }
+
+/* ---------- Painéis (gráficos e indicadores) ---------- */
+
+.panel {
+  height: var(--panel-height);
+  padding: 20px 20px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.panel:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-hover);
+}
+
+/* Indicador numérico, mesma altura do gráfico ao lado */
+.stat-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px;
+  text-align: center;
+}
+
+.stat-label {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.stat-value {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  margin: 4px 0;
+  color: var(--accent);
+  font-size: 3rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-unit {
+  color: var(--text-faint);
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.stat-caption {
+  color: var(--text-faint);
+  font-size: 0.8125rem;
+}
+
+/* ---------- Gráficos (Recharts) ---------- */
+
+.recharts-wrapper,
+.recharts-surface {
+  outline: none;
+}
+
+.recharts-cartesian-axis-tick-value {
+  fill: var(--text-muted);
+  font-size: 12px;
+}
+
+.recharts-default-tooltip {
+  border-radius: 10px !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-hover) !important;
+}
+
+/* Garante que nenhum retângulo de fundo apareça no hover das barras */
+.recharts-tooltip-cursor {
+  fill: transparent;
+}
+
+.recharts-legend-item-text {
+  color: var(--text-muted) !important;
+  font-size: 12px;
+}
+
+/* ---------- Botões ---------- */
+
+.btn {
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 8px 14px;
+  box-shadow: none !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn-primary {
+  background-color: var(--text-strong);
+  border-color: var(--text-strong);
+  color: #fff;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: #000;
+  border-color: #000;
+}
+
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-light {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-strong);
+}
+
+.btn-outline-primary:hover,
+.btn-outline-secondary:hover,
+.btn-light:hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
+  color: var(--text-strong);
+}
+
+.btn-success {
+  background-color: var(--success);
+  border-color: var(--success);
+}
+
+.btn-danger {
+  background-color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* ---------- Formulários ---------- */
+
+.form-control,
+.form-select {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-strong);
+  font-size: 0.875rem;
+  padding: 8px 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  outline: none;
+}
+
+.form-label {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+/* ---------- Tabelas ---------- */
+
+.table {
+  --bs-table-bg: transparent;
+  color: var(--text);
+  margin-bottom: 0;
+}
+
+.table > :not(caption) > * > * {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.table thead th {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  background: transparent;
+  border-bottom: 1px solid var(--border);
+}
+
+.table-hover > tbody > tr:hover > * {
+  background-color: var(--bg-subtle);
+  --bs-table-accent-bg: transparent;
+}
+
+/* ---------- Badges e alertas ---------- */
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge.bg-primary { background-color: var(--accent-soft) !important; color: var(--accent) !important; }
+.badge.bg-success { background-color: var(--success-soft) !important; color: var(--success) !important; }
+.badge.bg-warning { background-color: var(--warning-soft) !important; color: var(--warning) !important; }
+.badge.bg-danger { background-color: var(--danger-soft) !important; color: var(--danger) !important; }
+.badge.bg-secondary { background-color: var(--bg-subtle) !important; color: var(--text-muted) !important; }
+
+.alert {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+}
+
+/* ---------- Responsivo ---------- */
+
+@media (max-width: 767.98px) {
+  :root { --panel-height: 260px; }
+
+  .container,
+  .container-fluid {
+    padding-top: 20px;
+    padding-bottom: 32px;
+  }
+
+  .stat-value { font-size: 2.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
