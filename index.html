@@ -5,7 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RA Esteira - MetalTech</title>
   <link rel="stylesheet" href="./css/style.css">
+
+  <!-- A-Frame e MindAR (mesmas versões vistas em aula) -->
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 </head>
 <body>
+  <!-- Cena de RA: reconhece a foto da esteira (assets/target.mind) -->
+  <a-scene
+    id="cena"
+    mindar-image="imageTargetSrc: ./assets/target.mind; uiScanning: no; uiLoading: yes; uiError: no"
+    color-space="sRGB"
+    renderer="colorManagement: true"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <!-- Alvo: a imagem da esteira -->
+    <a-entity id="alvo" mindar-image-target="targetIndex: 0"></a-entity>
+  </a-scene>
 </body>
 </html>
