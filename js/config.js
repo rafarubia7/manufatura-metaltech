@@ -12,3 +12,7 @@ const API_URL = "";
 
 // Intervalo entre atualizações dos dados, em milissegundos.
 const INTERVALO_MS = 3000;
+
+// Tempo (ms) que os painéis continuam na tela depois que a câmera
+// perde a esteira. Evita que pisquem quando o celular treme.
+const TOLERANCIA_PERDA_MS = 1500;

@@ -3,7 +3,7 @@
 const el = {
   selo: document.getElementById("selo-teste"),
   cena: document.getElementById("cena"),
-  alvo: document.getElementById("alvo"),
+  alvos: document.querySelectorAll("[mindar-image-target]"),
   status: document.getElementById("status"),
   paineis: document.getElementById("paineis"),
   metalicas: document.getElementById("qtd-metalicas"),
@@ -16,10 +16,12 @@ const el = {
   nivelAlerta: document.getElementById("nivel-alerta"),
 };
 
-const TEXTO_PROCURANDO = "Aponte a câmera para a imagem da esteira…";
+const TEXTO_PROCURANDO = "Aponte a câmera para a esteira…";
 
 let temporizador = null;
 let alvoVisivel = false;
+let alvosVisiveis = 0;       // quantos alvos (fotos da esteira) estão na câmera
+let temporizadorPerda = null; // espera antes de esconder os painéis
 
 // Deixa claro quando os dados são fictícios
 el.selo.hidden = !MODO_TESTE;
@@ -80,19 +82,33 @@ function pararAtualizacao() {
 }
 
 // Esteira reconhecida: mostra os painéis e começa a atualizar
-el.alvo.addEventListener("targetFound", () => {
+function aoEncontrarEsteira() {
+  alvosVisiveis++;
+  clearTimeout(temporizadorPerda);
+  if (alvoVisivel) return; // já estava na tela (perda curta ou outro alvo)
   alvoVisivel = true;
   el.status.hidden = true;
   el.paineis.hidden = false;
   iniciarAtualizacao();
-});
+}
 
-// Esteira fora da câmera: esconde os painéis e para a atualização
-el.alvo.addEventListener("targetLost", () => {
-  alvoVisivel = false;
-  pararAtualizacao();
-  el.paineis.hidden = true;
-  mostrarStatus(TEXTO_PROCURANDO, false);
+// Esteira fora da câmera: espera um pouco e, se não voltar,
+// esconde os painéis e para a atualização
+function aoPerderEsteira() {
+  alvosVisiveis = Math.max(0, alvosVisiveis - 1);
+  if (alvosVisiveis > 0) return; // outro alvo da esteira ainda está visível
+  clearTimeout(temporizadorPerda);
+  temporizadorPerda = setTimeout(() => {
+    alvoVisivel = false;
+    pararAtualizacao();
+    el.paineis.hidden = true;
+    mostrarStatus(TEXTO_PROCURANDO, false);
+  }, TOLERANCIA_PERDA_MS);
+}
+
+el.alvos.forEach((alvo) => {
+  alvo.addEventListener("targetFound", aoEncontrarEsteira);
+  alvo.addEventListener("targetLost", aoPerderEsteira);
 });
 
 // A câmera só abre em HTTPS ou localhost (não funciona via file:// ou http na rede)
@@ -102,6 +118,7 @@ if (!window.isSecureContext) {
 
 // Falha ao iniciar a RA (câmera negada, sem câmera, sem HTTPS...)
 el.cena.addEventListener("arError", () => {
+  clearTimeout(temporizadorPerda);
   alvoVisivel = false;
   pararAtualizacao();
   el.paineis.hidden = true;
