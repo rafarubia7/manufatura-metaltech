@@ -19,6 +19,7 @@ const el = {
 const TEXTO_PROCURANDO = "Aponte a câmera para a imagem da esteira…";
 
 let temporizador = null;
+let alvoVisivel = false;
 
 // Deixa claro quando os dados são fictícios
 el.selo.hidden = !MODO_TESTE;
@@ -28,6 +29,12 @@ function classificarNivel(nivel) {
   if (nivel >= 90) return { classe: "nivel-critico", texto: "Crítico: esvaziar o reservatório" };
   if (nivel >= 70) return { classe: "nivel-atencao", texto: "Atenção: reservatório enchendo" };
   return { classe: "nivel-normal", texto: "Normal" };
+}
+
+function mostrarStatus(texto, ehErro) {
+  el.status.textContent = texto;
+  el.status.classList.toggle("erro", Boolean(ehErro));
+  el.status.hidden = false;
 }
 
 function mostrarDados(dados) {
@@ -49,11 +56,12 @@ function mostrarDados(dados) {
 async function atualizarDados() {
   try {
     const dados = await obterDados();
+    if (!alvoVisivel) return; // resposta chegou depois de perder o alvo
     mostrarDados(dados);
+    el.status.hidden = true; // some com erro anterior, se houver
   } catch (erro) {
-    el.status.textContent = erro.message;
-    el.status.classList.add("erro");
-    el.status.hidden = false;
+    if (!alvoVisivel) return;
+    mostrarStatus(erro.message, true);
   }
 }
 
@@ -73,6 +81,7 @@ function pararAtualizacao() {
 
 // Esteira reconhecida: mostra os painéis e começa a atualizar
 el.alvo.addEventListener("targetFound", () => {
+  alvoVisivel = true;
   el.status.hidden = true;
   el.paineis.hidden = false;
   iniciarAtualizacao();
@@ -80,8 +89,16 @@ el.alvo.addEventListener("targetFound", () => {
 
 // Esteira fora da câmera: esconde os painéis e para a atualização
 el.alvo.addEventListener("targetLost", () => {
+  alvoVisivel = false;
   pararAtualizacao();
   el.paineis.hidden = true;
-  el.status.textContent = TEXTO_PROCURANDO;
-  el.status.hidden = false;
+  mostrarStatus(TEXTO_PROCURANDO, false);
+});
+
+// Falha ao iniciar a RA (câmera negada, sem câmera, sem HTTPS...)
+el.cena.addEventListener("arError", () => {
+  alvoVisivel = false;
+  pararAtualizacao();
+  el.paineis.hidden = true;
+  mostrarStatus("Não foi possível acessar a câmera. Verifique a permissão e se o site está em HTTPS.", true);
 });
