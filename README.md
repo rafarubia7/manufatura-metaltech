@@ -10,7 +10,7 @@ Aplicação **WebAR** do Projeto Integrador da MetalTech (ADS). Ao apontar a câ
 
 Quando a esteira sai da câmera, os painéis ficam mais 1,5 s na tela (para não piscarem) e depois somem; o app volta a mostrar *"Aponte a câmera para a esteira…"*.
 
-Os painéis podem ser **arrastados com o dedo** para qualquer lugar da tela. A posição fica salva no celular, e o botão **↺ Organizar** volta tudo para o lugar inicial.
+Os painéis podem ser **arrastados com o dedo** para qualquer lugar da tela e **aumentados ou diminuídos** com os botões **−** / **+** (no canto de cima de cada painel) ou com **pinça de dois dedos**. Posição e tamanho ficam salvos no celular, e o botão **↺ Organizar** volta tudo ao lugar e tamanho iniciais.
 
 O reconhecimento usa o MindAR, que compara a câmera com **fotos da esteira** compiladas no `assets/target.mind`. Por isso a foto precisa ter sido tirada da posição de onde o usuário vai apontar o celular (veja [Como fazer o app reconhecer a esteira real](#como-fazer-o-app-reconhecer-a-esteira-real)).
 
@@ -36,7 +36,7 @@ ra-manotech/
 └── js/
     ├── config.js     # MODO_TESTE, API_URL, INTERVALO_MS, TOLERANCIA_PERDA_MS
     ├── dados.js      # obterDados(): simulado ou fetch na API
-    ├── arrastar.js   # arrastar os painéis e lembrar a posição
+    ├── arrastar.js   # mover/redimensionar os painéis e lembrar posição e tamanho
     └── main.js       # eventos targetFound/targetLost/arError e atualização da tela
 ```
 
@@ -74,8 +74,10 @@ npx localtunnel --port 3000
    - [ ] O selo amarelo **⚠ DADOS DE TESTE (SIMULADOS)** aparece no topo;
    - [ ] Ao reconhecer a esteira, aparecem os dois painéis (contagem e nível);
    - [ ] Os números mudam a cada 3 segundos;
-   - [ ] Dá para arrastar cada painel com o dedo; ao recarregar a página ele continua no lugar escolhido;
-   - [ ] O botão **↺ Organizar** volta os painéis para a posição inicial;
+   - [ ] Dá para arrastar cada painel com o dedo;
+   - [ ] Os botões **−** / **+** e a pinça com dois dedos diminuem/aumentam o painel;
+   - [ ] Ao recarregar a página, os painéis continuam no lugar e no tamanho escolhidos;
+   - [ ] O botão **↺ Organizar** volta os painéis para a posição e o tamanho iniciais;
    - [ ] A barra muda de cor (verde → amarelo → vermelho) conforme o nível;
    - [ ] Ao tirar a câmera da esteira, depois de ~1,5 s os painéis somem e volta a mensagem *"Aponte a câmera…"*;
    - [ ] Se negar a permissão da câmera, aparece *"Não foi possível acessar a câmera"*.
@@ -87,7 +89,7 @@ npx localtunnel --port 3000
 - Feche outros apps que estejam usando a câmera.
 - Depois de publicar uma nova versão, espere 1–2 min e **feche e abra a aba de novo**. O GitHub Pages deixa os arquivos em cache por até 10 min.
 - Para saber se a versão nova carregou: a mensagem inicial deve ser *"Aponte a câmera para a esteira…"* (a versão antiga dizia *"…para a imagem da esteira…"* e tinha fundo preto).
-- Ao alterar CSS ou JS, aumente o número `?v=` nos links do `index.html` (ex.: `style.css?v=4` → `?v=5`) para forçar o celular a baixar os arquivos novos.
+- Ao alterar CSS ou JS, aumente o número `?v=` nos links do `index.html` (ex.: `style.css?v=5` → `?v=6`) para forçar o celular a baixar os arquivos novos.
 
 ## Como fazer o app reconhecer a esteira real
 
