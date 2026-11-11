@@ -89,6 +89,7 @@ function aoEncontrarEsteira() {
   alvoVisivel = true;
   el.status.hidden = true;
   el.paineis.hidden = false;
+  aplicarPosicoesSalvas(); // posições escolhidas pelo usuário (js/arrastar.js)
   iniciarAtualizacao();
 }
 

@@ -90,10 +90,45 @@ body {
   border: 2px solid var(--borda);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
   pointer-events: auto;
+  /* arrastável */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+
+.card.arrastando {
+  cursor: grabbing;
+  border-color: #ffffff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.75);
+}
+
+/* Ícone de "arrastar" no título */
+.card h2::after {
+  content: "✥";
+  float: right;
+  opacity: 0.6;
+}
+
+/* Botão que volta os cards para o lugar inicial */
+.btn-organizar {
+  position: absolute;
+  top: 44px;
+  right: 12px;
+  padding: 8px 14px;
+  border: 2px solid var(--borda);
+  border-radius: 999px;
+  background: var(--fundo-card);
+  color: var(--texto);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 /* Posições iniciais: contagem em cima, nível embaixo */
-#card-contagem { top: 52px; }
+#card-contagem { top: 92px; }
 #card-nivel { bottom: 16px; }
 
 .card h2 {
@@ -177,8 +212,8 @@ body {
 /* Telas baixas (celular deitado): reduz um pouco */
 @media (max-height: 600px) {
   .card { padding: 12px 16px; width: min(calc(50vw - 18px), 420px); }
-  #card-contagem { top: 52px; left: 12px; transform: none; }
-  #card-nivel { top: 52px; bottom: auto; left: auto; right: 12px; transform: none; }
+  #card-contagem { top: 88px; left: 12px; transform: none; }
+  #card-nivel { top: 88px; bottom: auto; left: auto; right: 12px; transform: none; }
   .card h2 { font-size: 1rem; margin-bottom: 6px; }
   .contagem li { font-size: 1.1rem; }
   .contagem strong { font-size: 1.9rem; }
