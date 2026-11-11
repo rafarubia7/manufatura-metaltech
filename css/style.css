@@ -127,8 +127,36 @@ body {
   cursor: pointer;
 }
 
+/* Título + botões de tamanho (flutuando no canto de cima do card) */
+.card-topo {
+  margin-bottom: 0.75em;
+}
+
+.controles-tamanho {
+  position: absolute;
+  top: -0.9em;
+  right: 0.6em;
+  display: flex;
+  gap: 0.35em;
+}
+
+.controles-tamanho button {
+  width: 1.75em;
+  height: 1.75em;
+  padding: 0;
+  border: 1px solid var(--borda);
+  border-radius: 50%;
+  background: #1f2937;
+  color: var(--texto);
+  font: inherit;
+  font-size: 1em;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
 .card h2 {
-  margin: 0 0 0.75em;
+  margin: 0;
   font-size: 0.85em;
   font-weight: 700;
   text-transform: uppercase;

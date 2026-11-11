@@ -19,12 +19,18 @@
   <div id="status" class="status">Aponte a câmera para a esteira…</div>
 
   <!-- Painéis sobrepostos à câmera: aparecem só com a esteira detectada -->
-  <!-- Arraste os cards com o dedo para mudar de lugar -->
+  <!-- Arraste os cards para mudar de lugar; − / + ou pinça com dois dedos muda o tamanho -->
   <main id="paineis" class="paineis" hidden>
     <button id="btn-organizar" class="btn-organizar" type="button">↺ Organizar</button>
 
     <section id="card-contagem" class="card" aria-label="Contagem de peças">
-      <h2>Contagem de peças</h2>
+      <header class="card-topo">
+        <h2>Contagem de peças</h2>
+        <div class="controles-tamanho">
+          <button type="button" data-escala="-1" aria-label="Diminuir painel">−</button>
+          <button type="button" data-escala="1" aria-label="Aumentar painel">+</button>
+        </div>
+      </header>
       <ul class="contagem">
         <li><span>Metálicas</span><strong id="qtd-metalicas">--</strong></li>
         <li><span>Não metálicas</span><strong id="qtd-nao-metalicas">--</strong></li>
@@ -33,7 +39,13 @@
     </section>
 
     <section id="card-nivel" class="card nivel-normal" aria-label="Nível do reservatório">
-      <h2>Nível do reservatório</h2>
+      <header class="card-topo">
+        <h2>Nível do reservatório</h2>
+        <div class="controles-tamanho">
+          <button type="button" data-escala="-1" aria-label="Diminuir painel">−</button>
+          <button type="button" data-escala="1" aria-label="Aumentar painel">+</button>
+        </div>
+      </header>
       <p class="nivel-valor"><strong id="nivel-valor">--</strong>%</p>
       <div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="nivel-barra-container">
         <div id="nivel-barra" class="barra-preenchimento"></div>
