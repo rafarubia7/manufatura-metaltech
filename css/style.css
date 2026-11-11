@@ -70,31 +70,36 @@ body {
 }
 
 /* ---------- Painéis ---------- */
+/* Camada da tela inteira; cada card fica posicionado dentro dela */
 .paineis {
   position: fixed;
-  left: 16px;
-  right: 16px;
-  bottom: 16px;
+  inset: 0;
   z-index: 10001;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
-  max-width: 640px;
-  margin: 0 auto;
+  pointer-events: none; /* deixa a câmera "livre" fora dos cards */
 }
 
 .card {
-  padding: 14px;
-  border-radius: 14px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(calc(100vw - 24px), 460px);
+  box-sizing: border-box;
+  padding: 18px 20px;
+  border-radius: 18px;
   background: var(--fundo-card);
-  border: 1px solid var(--borda);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  border: 2px solid var(--borda);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
 }
 
+/* Posições iniciais: contagem em cima, nível embaixo */
+#card-contagem { top: 52px; }
+#card-nivel { bottom: 16px; }
+
 .card h2 {
-  margin: 0 0 10px;
-  font-size: 0.85rem;
-  font-weight: 700;
+  margin: 0 0 12px;
+  font-size: 1.3rem;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--texto-suave);
@@ -111,37 +116,46 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
+  gap: 12px;
   padding: 4px 0;
-  font-size: 1rem;
+  font-size: 1.5rem;
+  font-weight: 600;
 }
 
 .contagem strong {
-  font-size: 1.4rem;
+  font-size: 2.8rem;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 
 .contagem .total {
-  margin-top: 4px;
-  padding-top: 8px;
-  border-top: 1px solid var(--borda);
-  font-weight: 700;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 2px solid var(--borda);
+  font-weight: 800;
+}
+
+.contagem .total strong {
+  font-size: 3.2rem;
 }
 
 /* Nível do reservatório */
 .nivel-valor {
-  margin: 0 0 8px;
-  font-size: 1.2rem;
+  margin: 0 0 10px;
+  font-size: 2rem;
+  font-weight: 700;
 }
 
 .nivel-valor strong {
-  font-size: 2rem;
+  font-size: 4.2rem;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
 .barra {
   width: 100%;
-  height: 16px;
-  border-radius: 8px;
+  height: 30px;
+  border-radius: 15px;
   background: var(--barra-fundo);
   overflow: hidden;
 }
@@ -149,15 +163,28 @@ body {
 .barra-preenchimento {
   width: 0%;
   height: 100%;
-  border-radius: 8px;
+  border-radius: 15px;
   background: var(--verde);
   transition: width 0.5s ease, background-color 0.3s ease;
 }
 
 .nivel-alerta {
-  margin: 8px 0 0;
-  font-size: 0.9rem;
-  font-weight: 700;
+  margin: 10px 0 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+/* Telas baixas (celular deitado): reduz um pouco */
+@media (max-height: 600px) {
+  .card { padding: 12px 16px; width: min(calc(50vw - 18px), 420px); }
+  #card-contagem { top: 52px; left: 12px; transform: none; }
+  #card-nivel { top: 52px; bottom: auto; left: auto; right: 12px; transform: none; }
+  .card h2 { font-size: 1rem; margin-bottom: 6px; }
+  .contagem li { font-size: 1.1rem; }
+  .contagem strong { font-size: 1.9rem; }
+  .contagem .total strong { font-size: 2.2rem; }
+  .nivel-valor strong { font-size: 2.8rem; }
+  .nivel-alerta { font-size: 1.1rem; }
 }
 
 /* Cores de alerta: verde < 70%, amarelo 70–89%, vermelho >= 90% */
