@@ -1,6 +1,7 @@
 // Lógica principal: eventos da RA e atualização da tela.
 
 const el = {
+  selo: document.getElementById("selo-teste"),
   cena: document.getElementById("cena"),
   alvo: document.getElementById("alvo"),
   status: document.getElementById("status"),
@@ -15,6 +16,9 @@ const el = {
 };
 
 const TEXTO_PROCURANDO = "Aponte a câmera para a imagem da esteira…";
+
+// Deixa claro quando os dados são fictícios
+el.selo.hidden = !MODO_TESTE;
 
 // Esteira reconhecida: mostra os painéis
 el.alvo.addEventListener("targetFound", () => {
