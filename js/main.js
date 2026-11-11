@@ -95,6 +95,11 @@ el.alvo.addEventListener("targetLost", () => {
   mostrarStatus(TEXTO_PROCURANDO, false);
 });
 
+// A câmera só abre em HTTPS ou localhost (não funciona via file:// ou http na rede)
+if (!window.isSecureContext) {
+  mostrarStatus("A câmera só abre em HTTPS ou localhost. Use o link do GitHub Pages.", true);
+}
+
 // Falha ao iniciar a RA (câmera negada, sem câmera, sem HTTPS...)
 el.cena.addEventListener("arError", () => {
   alvoVisivel = false;
