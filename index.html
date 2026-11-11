@@ -11,6 +11,30 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 </head>
 <body>
+  <!-- Mensagem de status (procurando alvo, erros) -->
+  <div id="status" class="status">Aponte a câmera para a imagem da esteira…</div>
+
+  <!-- Painéis sobrepostos à câmera: aparecem só com a esteira detectada -->
+  <main id="paineis" class="paineis" hidden>
+    <section class="card" aria-label="Contagem de peças">
+      <h2>Contagem de peças</h2>
+      <ul class="contagem">
+        <li><span>Metálicas</span><strong id="qtd-metalicas">--</strong></li>
+        <li><span>Não metálicas</span><strong id="qtd-nao-metalicas">--</strong></li>
+        <li class="total"><span>Total</span><strong id="qtd-total">--</strong></li>
+      </ul>
+    </section>
+
+    <section class="card" aria-label="Nível do reservatório">
+      <h2>Nível do reservatório</h2>
+      <p class="nivel-valor"><strong id="nivel-valor">--</strong>%</p>
+      <div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="nivel-barra-container">
+        <div id="nivel-barra" class="barra-preenchimento"></div>
+      </div>
+      <p id="nivel-alerta" class="nivel-alerta">--</p>
+    </section>
+  </main>
+
   <!-- Cena de RA: reconhece a foto da esteira (assets/target.mind) -->
   <a-scene
     id="cena"
@@ -25,5 +49,7 @@
     <!-- Alvo: a imagem da esteira -->
     <a-entity id="alvo" mindar-image-target="targetIndex: 0"></a-entity>
   </a-scene>
+
+  <script src="./js/main.js"></script>
 </body>
 </html>
