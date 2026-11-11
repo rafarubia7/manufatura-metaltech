@@ -80,7 +80,9 @@ npx localtunnel --port 3000
 - Abra pelo link **HTTPS** do GitHub Pages. Abrir o arquivo direto (`file://`) ou por `http://IP-do-PC` não libera a câmera (o app avisa na tela).
 - Confira se o navegador tem permissão de câmera (cadeado na barra de endereço → Permissões).
 - Feche outros apps que estejam usando a câmera.
-- Depois de publicar uma nova versão, recarregue a página (o GitHub Pages pode demorar 1–2 min para atualizar).
+- Depois de publicar uma nova versão, espere 1–2 min e **feche e abra a aba de novo**. O GitHub Pages deixa os arquivos em cache por até 10 min.
+- Para saber se a versão nova carregou: a mensagem inicial deve ser *"Aponte a câmera para a esteira…"* (a versão antiga dizia *"…para a imagem da esteira…"* e tinha fundo preto).
+- Ao alterar CSS ou JS, aumente o número `?v=` nos links do `index.html` (ex.: `style.css?v=3` → `?v=4`) para forçar o celular a baixar os arquivos novos.
 
 ## Como fazer o app reconhecer a esteira real
 
