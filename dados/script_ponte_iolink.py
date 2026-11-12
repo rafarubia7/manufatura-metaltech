@@ -50,7 +50,7 @@ def hex_para_decimal(raw_value: Any, *, bits: int = 16, signed: bool = False) ->
 
     Exemplos:
       hex_para_decimal("0161") -> 353
-      hex_para_decimal("7FE0") -> 32768
+      hex_para_decimal("7FE0") -> 32736
       hex_para_decimal("FF80", bits=16, signed=True) -> -128
     """
     if raw_value is None:
@@ -122,6 +122,31 @@ def extrair_dados_iolink(dados_brutos: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+LIMITE_BAIXO, LIMITE_ALTO, LIMITE_CRITICO = 20.0, 80.0, 95.0
+
+
+def classificar_peca(detectou_metal: bool, detectou_nao_metal: bool) -> str:
+    """Mesma regra do dataset e do back-end: o tipo sai dos dois sensores de material."""
+    if detectou_metal and detectou_nao_metal:
+        return "AMBAS"
+    if detectou_metal:
+        return "METALICA"
+    if detectou_nao_metal:
+        return "NAO_METALICA"
+    return "DESCONHECIDA"
+
+
+def status_reservatorio(percentual: float) -> str:
+    """Mesmos limites do back-end (informativo: o back-end recalcula)."""
+    if percentual >= LIMITE_CRITICO:
+        return "CRITICO"
+    if percentual > LIMITE_ALTO:
+        return "ALERTA_ALTO"
+    if percentual < LIMITE_BAIXO:
+        return "ALERTA_BAIXO"
+    return "NORMAL"
+
+
 def construir_payload(dados_iolink: dict[str, Any], *, dispositivo_id: str, versao_firmware: str = "1.0.0") -> dict[str, Any]:
     distancia = hex_para_decimal(dados_iolink["distancia_raw"], bits=16, signed=False)
     indutivo = hex_para_decimal(dados_iolink["indutivo_raw"], bits=16, signed=False)
@@ -141,10 +166,9 @@ def construir_payload(dados_iolink: dict[str, Any], *, dispositivo_id: str, vers
     indutivo_intensidade = safe_float(indutivo, default=0.0)
     capacitivo_intensidade = safe_float(capacitivo, default=0.0)
 
-    # Classificação genérica derivada do nível de reservatório.
-    tipo_peca = "DESCONHECIDA"
-    if nivel is not None:
-        tipo_peca = "DESCONHECIDA"
+    detectou_metal = bool(indutivo_intensidade > 0.1)
+    detectou_nao_metal = bool(capacitivo_intensidade > 0.1)
+    tipo_peca = classificar_peca(detectou_metal, detectou_nao_metal)
 
     payload = {
         "timestamp": instante,
@@ -154,12 +178,12 @@ def construir_payload(dados_iolink: dict[str, Any], *, dispositivo_id: str, vers
             "status": "OK",
         },
         "sensorIndutivo": {
-            "detectouMetal": bool(indutivo_intensidade > 0.1),
+            "detectouMetal": detectou_metal,
             "intensidade": float(indutivo_intensidade),
             "status": status_sensor,
         },
         "sensorCapacitivo": {
-            "detectouNaoMetal": bool(capacitivo_intensidade > 0.1),
+            "detectouNaoMetal": detectou_nao_metal,
             "intensidade": float(capacitivo_intensidade),
             "status": status_sensor,
         },
@@ -172,7 +196,7 @@ def construir_payload(dados_iolink: dict[str, Any], *, dispositivo_id: str, vers
             "nivelAtual": float(nivel),
             "capacidadeMaxima": 100.0,
             "percentual": float(nivel),
-            "status": "NORMAL",
+            "status": status_reservatorio(float(nivel)),
         },
         "dispositivoId": dispositivo_id,
         "versaoFirmware": versao_firmware,
