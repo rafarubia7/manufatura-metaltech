@@ -116,7 +116,34 @@ public class LeituraSensoresService {
 
     @Transactional
     public void excluirPorId(Long id) {
+        if (!leituraRepository.existsById(id)) {
+            throw new EntityNotFoundException("Leitura não encontrada: " + id);
+        }
         leituraRepository.deleteById(id);
+    }
+
+    /**
+     * Corrige uma leitura existente. O instante é imutável; classificação, status e alertas
+     * são recalculados pelas mesmas regras do POST.
+     */
+    @Transactional
+    public LeituraSensores atualizarLeitura(Long id, LeituraSensores novosDados) {
+        LeituraSensores existente = leituraRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Leitura não encontrada: " + id));
+
+        existente.setDistanciaCm(novosDados.getDistanciaCm());
+        existente.setIndutivoDetectouMetal(novosDados.getIndutivoDetectouMetal());
+        existente.setIndutivoIntensidade(novosDados.getIndutivoIntensidade());
+        existente.setCapacitivoDetectouNaoMetal(novosDados.getCapacitivoDetectouNaoMetal());
+        existente.setCapacitivoIntensidade(novosDados.getCapacitivoIntensidade());
+        existente.setTipoPeca(novosDados.getTipoPeca());
+        existente.setNivelReservatorioPercentual(novosDados.getNivelReservatorioPercentual());
+        existente.setStatusReservatorio(novosDados.getStatusReservatorio());
+        existente.setDispositivoId(novosDados.getDispositivoId());
+        existente.setVersaoFirmware(novosDados.getVersaoFirmware());
+
+        existente.getAlertas().clear(); // orphanRemoval apaga os alertas antigos
+        return salvarLeitura(existente);
     }
 
     @Transactional(readOnly = true)

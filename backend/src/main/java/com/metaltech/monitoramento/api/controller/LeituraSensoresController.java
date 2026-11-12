@@ -12,6 +12,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.format.annotation.DateTimeFormat.ISO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -106,6 +107,22 @@ public class LeituraSensoresController {
                 .map(mapper::paraRespostaDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Corrige uma leitura existente (o timestamp não muda)",
+            description = "Tipo da peça, status do reservatório e alertas são recalculados como no POST.")
+    public ResponseEntity<LeituraSensoresRespostaDTO> atualizarLeitura(
+            @PathVariable("id") Long id, @Valid @RequestBody LeituraSensoresDTO dto) {
+        LeituraSensores atualizada = leituraService.atualizarLeitura(id, mapper.paraEntidade(dto));
+        return ResponseEntity.ok(mapper.paraRespostaDto(atualizada));
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Exclui uma leitura e os alertas gerados por ela")
+    public ResponseEntity<Void> excluirLeitura(@PathVariable("id") Long id) {
+        leituraService.excluirPorId(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/alertas")
