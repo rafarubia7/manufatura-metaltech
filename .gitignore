@@ -5,27 +5,23 @@
 **/*.class
 **/*.jar
 **/*.log
-ECHO est  ativado.
+
 # Python
 **/.venv/
 **/venv/
 **/__pycache__/
 **/*.py[cod]
-ECHO est  ativado.
-# Artefatos locais gerados
-dados/graficos/
-dados/resultados/
-ECHO est  ativado.
-# IDE
+**/.pytest_cache/
+
+# IDE / sistema
 .idea/
 .vscode/
 .DS_Store
 Thumbs.db
-ECHO est  ativado.
+
+# Ambiente local e segredos
+.env
+
 # Documentos locais
 plano_acao_tecnico.md
 projeto_interdisciplinar.md
-ECHO est  ativado.
-# Git
-!README.md
-!docs/*.md
