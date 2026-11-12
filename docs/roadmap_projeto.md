@@ -12,8 +12,10 @@ Este documento consolida o estado atual da etapa de desenvolvimento, os principa
 - Persistência com MySQL e Flyway
 - Geração de alertas e estatísticas de negócio
 - Testes automatizados do backend executando
-- Pipeline de dados simulados em Python
-- Validação inicial da integração CIDA → API
+- Gateway IO-Link lendo os sensores reais e enviando à API
+- Dashboard web consumindo a API
+- Pipeline de dados sintéticos em Python e relatório de Ciência de Dados
+- Validação da integração CIDA → API
 
 ### Em andamento
 - refinamento final da documentação
@@ -22,8 +24,8 @@ Este documento consolida o estado atual da etapa de desenvolvimento, os principa
 - preparação para a próxima etapa: front-end e entrega final
 
 ### Pendente
-- dashboard web
-- integração front-end com API
+- calibração do nível do reservatório no gateway
+- comparar a análise sintética com leituras reais do gateway
 - deploy e nuvem
 - autenticação/segurança
 - observabilidade
@@ -55,10 +57,10 @@ Fechar a base funcional e deixar o projeto pronto para as próximas frentes sem 
 3. garantir que pastas sigam nomes claros e consistentes
 4. remover ou ignorar arquivos que não devem ir para versionamento
 
-### Fase 4 — Validar CIDA e API
+### Fase 4 — Validar CIDA, gateway e API
 1. validar geração do dataset
 2. validar análise estatística
-3. validar envio para API
+3. validar envio para API e a leitura real dos sensores (`gateway.py --sondar`)
 4. confirmar que os resultados são coerentes com a regra de negócio
 
 ### Fase 5 — Preparar a próxima etapa
@@ -72,7 +74,7 @@ Fechar a base funcional e deixar o projeto pronto para as próximas frentes sem 
 - Backend funcional em ambiente local com MySQL
 - README e guias consistentes com o projeto real
 - API documentada e integrada ao processo de operação
-- CIDA validada com dados simulados
+- CIDA validada com dados sintéticos e gateway enviando leituras reais para a API
 - Repositório organizado e pronto para continuidade
 
 ## 6. Riscos principais
@@ -81,7 +83,7 @@ Fechar a base funcional e deixar o projeto pronto para as próximas frentes sem 
 - uso de `localhost` no front-end quando a aplicação está em outra máquina
 - banco e schema sem alinhamento documental claro
 - mistura de artefatos gerados e arquivos de origem
-- ausência de uma estratégia formal para dados reais industriais
+- calibração do nível do reservatório ainda pendente
 
 ## 7. Próximo passo imediato
 
@@ -89,7 +91,7 @@ Antes de iniciar o desenvolvimento do front-end, a equipe deve:
 
 1. fechar documentação
 2. validar backend
-3. validar pipeline CIDA
+3. validar pipeline CIDA e o gateway
 4. confirmar URL de acesso em rede local
 5. preparar interface seguindo o contrato da API
 

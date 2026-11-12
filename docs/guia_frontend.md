@@ -14,17 +14,18 @@ Importante:
 
 - O Docker usado neste projeto é para o banco MySQL, não para o front-end.
 - O back-end é executado localmente no PC que roda o Java.
-- O front-end em outro PC deve chamar o back-end pelo IP do computador que está executando o Spring Boot.
+- No próprio PC do back-end, o endereço é `localhost`. Em outro PC, o front-end chama o back-end pelo IP do computador que executa o Spring Boot.
+- O front-end descobre o endereço sozinho: sem configuração, ele usa o mesmo host pelo qual a página foi aberta, na porta 8080. Por isso não é preciso editar o IP quando ele muda.
 
 Exemplo:
 
-- Backend PC: `10.110.12.43`
 - Backend porta padrão: `8080`
-- Base da API: `http://10.110.12.43:8080`
+- Base da API no próprio PC: `http://localhost:8080`
+- Base da API a partir de outro PC: `http://<IP-do-PC-do-backend>:8080` (descubra o IP com `ipconfig`)
 
 Se a porta 8080 estiver ocupada, o backend pode subir na porta 8081. Nesse caso:
 
-- Base da API: `http://10.110.12.43:8081`
+- Base da API: `http://localhost:8081`. Nesse caso defina `VITE_API_URL=http://localhost:8081` em `frontend/.env.local` e ajuste o `api_url` do gateway
 
 ---
 
@@ -62,37 +63,30 @@ A API principal está em:
 
 A documentação completa está no Swagger:
 
-- `http://10.110.12.43:8080/swagger-ui.html`
+- `http://localhost:8080/swagger-ui.html`
 
 Se a porta for 8081:
 
-- `http://10.110.12.43:8081/swagger-ui.html`
+- `http://localhost:8081/swagger-ui.html`
 
 ---
 
 ## 4. Como configurar a URL da API no front-end
 
-No front-end, o ideal é ter uma variável de configuração.
-
-### Exemplo em JavaScript puro
+O front-end deste projeto (`frontend/src/services/api.js`) já resolve o endereço sozinho:
 
 ```js
-const API_URL = "http://10.110.12.43:8080";
+const API_URL = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:8080`;
 ```
 
-### Exemplo em React/Vite
-
-Arquivo `.env`:
+- Sem `VITE_API_URL`: usa o host em que a página foi aberta, na porta 8080 (`localhost` no próprio PC, o IP do PC do back-end quando aberto por outro computador).
+- Com `VITE_API_URL`: usa o valor definido. Para não alterar arquivo versionado, defina em `frontend/.env.local`:
 
 ```env
-VITE_API_URL=http://10.110.12.43:8080
+VITE_API_URL=http://localhost:8081
 ```
 
-No código:
-
-```js
-const API_URL = import.meta.env.VITE_API_URL;
-```
+Para outros PCs abrirem o dashboard, suba o Vite expondo a rede: `npm run dev -- --host`.
 
 ---
 
@@ -101,25 +95,25 @@ const API_URL = import.meta.env.VITE_API_URL;
 ### 5.1 Listar leituras
 
 ```http
-GET http://10.110.12.43:8080/api/v1/leituras?size=20
+GET http://localhost:8080/api/v1/leituras?size=20
 ```
 
 ### 5.2 Listar alertas
 
 ```http
-GET http://10.110.12.43:8080/api/v1/leituras/alertas
+GET http://localhost:8080/api/v1/leituras/alertas
 ```
 
 ### 5.3 Obter estatísticas
 
 ```http
-GET http://10.110.12.43:8080/api/v1/leituras/estatisticas
+GET http://localhost:8080/api/v1/leituras/estatisticas
 ```
 
 ### 5.4 Enviar nova leitura
 
 ```http
-POST http://10.110.12.43:8080/api/v1/leituras
+POST http://localhost:8080/api/v1/leituras
 Content-Type: application/json
 ```
 
@@ -162,7 +156,7 @@ Exemplo de payload:
 ### 5.5 Resolver alerta
 
 ```http
-PUT http://10.110.12.43:8080/api/v1/leituras/alertas/1/resolver
+PUT http://localhost:8080/api/v1/leituras/alertas/1/resolver
 ```
 
 ---
@@ -172,7 +166,7 @@ PUT http://10.110.12.43:8080/api/v1/leituras/alertas/1/resolver
 ### Exemplo: carregar estatísticas
 
 ```js
-const API_URL = "http://10.110.12.43:8080";
+const API_URL = "http://localhost:8080";
 
 async function carregarEstatisticas() {
   const resposta = await fetch(`${API_URL}/api/v1/leituras/estatisticas`);
@@ -304,25 +298,15 @@ Mesmo assim, se o front-end estiver em outro PC, é necessário garantir que:
 - o backend está rodando no PC correto
 - a porta 8080 ou 8081 está acessível
 - o firewall do PC do backend não está bloqueando a porta
-- o front-end usa o IP do backend, e não `localhost`
+- o front-end foi aberto pelo IP do PC do backend (ele reaproveita esse host para chamar a API); abrir por `localhost` em outro PC não funciona
 
 ---
 
 ## 10. O que normalmente dá errado
 
-### Problema: o front-end usa localhost
+### Problema: o front-end fixa `localhost`
 
-Errado:
-
-```js
-const API_URL = "http://localhost:8080";
-```
-
-Certo:
-
-```js
-const API_URL = "http://10.110.12.43:8080";
-```
+Em outro PC, `localhost` aponta para o próprio computador e não para o back-end. Não escreva o endereço fixo no código: use o padrão de `api.js` (host da página + porta 8080) ou defina `VITE_API_URL`.
 
 ### Problema: porta bloqueada
 
@@ -357,25 +341,27 @@ $env:SERVER_PORT = "8081"
 
 O front-end precisa apenas:
 
-- apontar para o IP do PC do backend
+- apontar para a API (automático: mesmo host da página, porta 8080)
 - consumir os endpoints REST da API
 - mostrar os dados em tela
 - atender a regra de acesso via CORS
 
-O endereço base, no cenário atual, é:
+O endereço base, no próprio PC do back-end, é:
 
 ```text
-http://10.110.12.43:8080
+http://localhost:8080
 ```
 
 Exemplo completo:
 
 ```text
-http://10.110.12.43:8080/swagger-ui.html
-http://10.110.12.43:8080/api/v1/leituras
-http://10.110.12.43:8080/api/v1/leituras/alertas
-http://10.110.12.43:8080/api/v1/leituras/estatisticas
+http://localhost:8080/swagger-ui.html
+http://localhost:8080/api/v1/leituras
+http://localhost:8080/api/v1/leituras/alertas
+http://localhost:8080/api/v1/leituras/estatisticas
 ```
+
+Em outro PC, troque `localhost` pelo IP do PC do back-end.
 
 ---
 

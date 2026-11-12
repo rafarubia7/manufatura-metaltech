@@ -36,29 +36,26 @@ Pendente de refinamento:
 - melhorar observabilidade e robustez de produção
 
 ### Ciência de Dados
-Status: funcional para dados simulados, pronto para análise e integração com API.
+Status: dataset sintético, análise estatística e relatório concluídos; análise sobre leituras reais do gateway em andamento.
 
 Concluído:
-- geração de dataset sintético
+- geração de dataset sintético reproduzível
 - análise estatística exploratória
 - extração de métricas operacionais
 - detecção de padrões e outliers
 - geração de gráficos e resultados em arquivos estruturados
+- relatório técnico (`docs/relatorio_ciencia_dados.md`)
 
 Pendente:
-- adaptar o pipeline para dados reais industriais
-- validar a camada de conversão e normalização de payloads reais
-- concluir relatório técnico final com foco em uso real
+- repetir a análise com leituras reais do gateway (`--fonte api`)
+- registrar no relatório a comparação entre dados sintéticos e reais
 
 ### Front-end e próximas etapas
-Status: não implementado nesta fase.
+Status: dashboard (`frontend/`) e gateway IO-Link (`automacao/`) já estão no repositório e usam dados reais.
 
 Ainda pendente:
-- dashboard web
-- visualização de alertas e estatísticas
-- integrações front-end → API
 - deploy/infra de nuvem
-- realidade aumentada
+- autenticação e observabilidade
 
 ## Estrutura do repositório
 
@@ -69,19 +66,20 @@ Ainda pendente:
 │   ├── src/main/resources/      application.yml, Flyway e configs
 │   ├── src/test/                testes unitários e de integração
 │   └── Dockerfile
+├── frontend/                    Dashboard web (React + Vite)
+├── automacao/                   Gateway IO-Link: lê os sensores reais e envia à API
 ├── dados/                       Ciência de Dados (CIDA)
-│   ├── gerar_dataset.py         geração do dataset simulado
-│   ├── analise_estatistica.py   estatísticas, outliers e gráficos
-│   ├── enviar_para_api.py       envia o dataset simulado para a API e valida API x pandas
+│   ├── gerar_dataset.py         geração do dataset sintético
+│   ├── analise_estatistica.py   estatísticas, outliers e gráficos (CSV ou API)
+│   ├── enviar_para_api.py       envia o dataset sintético para a API e valida API x pandas
 │   ├── script_ponte_iolink.py   ponte IO-Link (HEX) para a API
-│   ├── leituras_simuladas.csv  dataset principal
-│   ├── eventos_simulados.csv   eventos/anomalias
-│   ├── graficos/               arquivos gráficos gerados
-│   └── resultados/             JSON, CSV, resumo e validação
+│   ├── leituras_simuladas.csv   dataset principal
+│   ├── eventos_simulados.csv    eventos/anomalias
+│   ├── graficos/                arquivos gráficos gerados
+│   └── resultados/              JSON, CSV, resumo e validação
 ├── docs/
 │   ├── guia_execucao.md        guia de execução do projeto
 │   ├── guia_frontend.md        guia de integração do front-end
-│   ├── relatorio_ciencia_dados.md  relatório técnico da CIDA
 │   └── roadmap_projeto.md      roadmap da etapa atual e próximos passos
 ├── docker-compose.yml           infraestrutura local do MySQL
 └── README.md
@@ -95,7 +93,9 @@ Ainda pendente:
 Copy-Item .env.example .env
 ```
 
-Edite o `.env` e defina as senhas. O `.env` não vai para o Git.
+Edite o `.env` e defina as senhas. O `.env` não vai para o Git. Sem ele, o `docker compose` falha com `required variable MYSQL_PASSWORD is missing a value`.
+
+Ao rodar o back-end localmente (`mvnw spring-boot:run`), o Spring não lê o `.env`: carregue as variáveis na sessão do PowerShell, como descrito em [docs/guia_execucao.md](docs/guia_execucao.md) (Passo 3). Esse guia também cobre o front-end, o gateway IO-Link e a Ciência de Dados.
 
 ### 1. Banco de dados
 
@@ -128,16 +128,35 @@ $env:SERVER_PORT = "8081"
 .\mvnw.cmd spring-boot:run
 ```
 
-### 3. Python / CIDA
+### 3. Front-end
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+### 4. Gateway IO-Link (dados reais)
+
+```powershell
+cd automacao
+python -m venv .venv
+.\.venv\Scripts\python -m pip install -r requirements.txt
+.\.venv\Scripts\python gateway.py --sondar
+.\.venv\Scripts\python gateway.py
+```
+
+### 5. Ciência de Dados
 
 ```powershell
 cd dados
 python -m venv .venv
-.venv\Scripts\pip install -r requirements.txt
-.venv\Scripts\python gerar_dataset.py
-.venv\Scripts\python analise_estatistica.py
-.venv\Scripts\python enviar_para_api.py
+.\.venv\Scripts\python -m pip install -r requirements.txt
+.\.venv\Scripts\python gerar_dataset.py
+.\.venv\Scripts\python analise_estatistica.py
 ```
+
+Para analisar as leituras reais gravadas pelo gateway: `.\.venv\Scripts\python analise_estatistica.py --fonte api`.
 
 ## Endpoints principais
 
@@ -169,10 +188,10 @@ Documentação interativa:
 
 O pipeline de CIDA foi estruturado para:
 
-- gerar um dataset reproduzível e consistente
+- gerar um dataset sintético reproduzível e consistente
 - analisar a operação da esteira e o comportamento do reservatório
 - identificar padrões, anomalias e outliers
-- validar o contrato da API com o dataset simulado
+- comparar a análise com as leituras reais do gateway (`--fonte api`)
 
 A análise técnica e os relatórios encontram-se em:
 
@@ -183,31 +202,29 @@ A análise técnica e os relatórios encontram-se em:
 ### Concluído
 - backend funcional com MySQL real
 - testes automatizados do backend executando com sucesso
-- pipeline de dados simulados validado
-- integração CIDA → API validação operacional
+- gateway IO-Link lendo os sensores reais e enviando à API
+- dashboard consumindo a API
 - documentação de uso e integração organizada
 
 ### Pendência de continuidade
-- front-end/dashboard
+- calibração do nível do reservatório (`vazio_raw`/`cheio_raw` do gateway)
 - nuvem/deploy
 - autenticação e observabilidade
-- adaptação da CIDA para dados reais industriais
 - refinamento final da documentação acadêmica e operacional
 
 ## Caminho recomendado para a próxima etapa
 
 1. Validar o backend local com MySQL em funcionamento
-2. Validar a CIDA com dados simulados e a API
-3. Concluir a documentação operacional e onboarding
-4. Desenvolver o front-end consumindo a API REST
-5. Planejar a adaptação para dados reais do processo industrial
+2. Calibrar o gateway e validar o fluxo sensores → API → dashboard
+3. Acumular leituras reais e rodar a análise estatística
+4. Concluir a documentação operacional e onboarding
 
 ## Observações importantes
 
 - Cobertura de testes medida com JaCoCo (`cd backend; .\mvnw.cmd verify`, relatório em `backend/target/site/jacoco/index.html`): **90% das linhas**; o build falha abaixo de 70%. O teste de integração com MySQL usa Testcontainers e precisa do Docker ativo.
 - O projeto usa MySQL por padrão na versão atual; PostgreSQL deixou de ser a referência principal da execução local.
 - O Docker é usado para o banco e não para o front-end.
-- Para outros PCs da rede, o front-end deve usar o IP do PC que roda o backend, e não `localhost`.
+- O front-end usa, por padrão, o mesmo host em que a página foi aberta (porta 8080); não é preciso editar IP. Em outro PC, abra o dashboard pelo IP do PC que roda o backend.
 
 Mais detalhes e instruções em:
 - [docs/guia_execucao.md](docs/guia_execucao.md)
