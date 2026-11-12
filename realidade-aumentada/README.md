@@ -14,7 +14,7 @@ Os painéis podem ser **arrastados com o dedo** para qualquer lugar da tela e **
 
 O reconhecimento usa o MindAR, que compara a câmera com **fotos da esteira** compiladas no `assets/target.mind`. Por isso a foto precisa ter sido tirada da posição de onde o usuário vai apontar o celular (veja [Como fazer o app reconhecer a esteira real](#como-fazer-o-app-reconhecer-a-esteira-real)).
 
-> ⚠ **Atenção:** por enquanto o app usa **DADOS DE TESTE (SIMULADOS)**. Os números são inventados e mudam a cada 3 segundos.
+> ⚠ **Aviso importante:** os dados exibidos nesta aplicação (contagem de peças e nível do reservatório) são **FICTÍCIOS**, gerados por simulação, e mudam a cada 3 segundos. Não há integração com dados reais da esteira. Esta é a **versão final** da aplicação de Realidade Aumentada do projeto e serve para demonstrar o conceito e a experiência de uso.
 
 ## Como apontar a câmera para a esteira
 
@@ -52,7 +52,7 @@ ra-manotech/
 │   └── guia-angulo-esteira.png  # imagem-guia do ângulo da câmera (a adicionar)
 └── js/
     ├── config.js     # INTERVALO_MS, TOLERANCIA_PERDA_MS e demais configurações
-    ├── dados.js      # obterDados(): simulado ou fetch na API
+    ├── dados.js      # obterDados(): gera os dados fictícios (simulados)
     ├── arrastar.js   # mover/redimensionar os painéis e lembrar posição e tamanho
     └── main.js       # eventos targetFound/targetLost/arError e atualização da tela
 ```
@@ -65,6 +65,7 @@ ra-manotech/
    - Sem acesso à esteira? Dá para testar apontando para a própria foto na tela do computador.
 4. Confira:
    - [ ] O selo amarelo **⚠ DADOS DE TESTE (SIMULADOS)** aparece no topo;
+   - [ ] Os valores exibidos são fictícios (simulados), conforme o aviso no topo deste README;
    - [ ] Ao reconhecer a esteira, aparecem os dois painéis (contagem e nível);
    - [ ] Os números mudam a cada 3 segundos;
    - [ ] Dá para arrastar cada painel com o dedo;
