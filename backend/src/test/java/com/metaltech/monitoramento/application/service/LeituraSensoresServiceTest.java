@@ -126,6 +126,14 @@ class LeituraSensoresServiceTest {
     }
 
     @Test
+    void deveDerivarOTipoDaPecaDosSensores() {
+        LeituraSensores salva = leituraService.salvarLeitura(
+                leitura(TipoPeca.NAO_METALICA, 50.0, StatusReservatorio.NORMAL));
+
+        assertThat(salva.getTipoPeca()).isEqualTo(TipoPeca.METALICA);
+    }
+
+    @Test
     void deveBuscarPorPeriodo() {
         LeituraSensores l = leitura(TipoPeca.METALICA, 50.0, null);
         when(leituraRepository.buscarPorPeriodo(any(Instant.class), any(Instant.class))).thenReturn(List.of(l));

@@ -17,6 +17,9 @@ import com.metaltech.monitoramento.domain.model.LeituraSensores;
 import com.metaltech.monitoramento.domain.model.StatusReservatorio;
 import com.metaltech.monitoramento.domain.model.TipoAlerta;
 import com.metaltech.monitoramento.domain.model.TipoPeca;
+import com.metaltech.monitoramento.domain.sensor.ClassificadorPeca;
+import com.metaltech.monitoramento.domain.sensor.SensorCapacitivo;
+import com.metaltech.monitoramento.domain.sensor.SensorIndutivo;
 import com.metaltech.monitoramento.infrastructure.repository.AlertaNivelRepository;
 import com.metaltech.monitoramento.infrastructure.repository.LeituraSensoresRepository;
 
@@ -43,6 +46,7 @@ public class LeituraSensoresService {
      */
     @Transactional
     public LeituraSensores salvarLeitura(LeituraSensores leitura) {
+        aplicarClassificacaoDaPeca(leitura);
         aplicarStatusReservatorio(leitura);
 
         TipoAlerta alertaReservatorio = alertaParaStatus(leitura.getStatusReservatorio());
@@ -125,6 +129,18 @@ public class LeituraSensoresService {
         AlertaNivel alerta = alertaRepository.findById(alertaId)
                 .orElseThrow(() -> new EntityNotFoundException("Alerta não encontrado: " + alertaId));
         alerta.marcarComoResolvido();
+    }
+
+    private void aplicarClassificacaoDaPeca(LeituraSensores leitura) {
+        TipoPeca calculado = ClassificadorPeca.classificar(List.of(
+                new SensorIndutivo(leitura.getIndutivoDetectouMetal(), leitura.getIndutivoIntensidade()),
+                new SensorCapacitivo(leitura.getCapacitivoDetectouNaoMetal(), leitura.getCapacitivoIntensidade())));
+        TipoPeca informado = leitura.getTipoPeca();
+        if (informado != null && informado != calculado) {
+            log.warn("Tipo informado pelo dispositivo {} ({}) diverge dos sensores ({}); usando o derivado dos sensores",
+                    leitura.getDispositivoId(), informado, calculado);
+        }
+        leitura.setTipoPeca(calculado);
     }
 
     private void aplicarStatusReservatorio(LeituraSensores leitura) {
