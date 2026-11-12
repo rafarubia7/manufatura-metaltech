@@ -20,6 +20,14 @@ public interface LeituraSensoresRepository extends JpaRepository<LeituraSensores
 
     long countByTipoPeca(TipoPeca tipo);
 
+    // Leituras do dispositivo em [inicio, fim), da mais antiga para a mais nova.
+    @Query("SELECT l FROM LeituraSensores l WHERE l.dispositivoId = :dispositivoId "
+            + "AND l.dataHora >= :inicio AND l.dataHora < :fim ORDER BY l.dataHora ASC, l.id ASC")
+    List<LeituraSensores> buscarJanelaAnterior(@Param("dispositivoId") String dispositivoId,
+                                               @Param("inicio") Instant inicio,
+                                               @Param("fim") Instant fim,
+                                               Pageable paginacao);
+
     @Query("SELECT l FROM LeituraSensores l ORDER BY l.dataHora")
     List<LeituraSensores> listarEmOrdemCronologica();
 

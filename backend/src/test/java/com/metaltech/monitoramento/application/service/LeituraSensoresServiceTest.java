@@ -134,6 +134,28 @@ class LeituraSensoresServiceTest {
     }
 
     @Test
+    void deveGerarAlertaDeEnchimentoRapidoQuandoATaxaExcedeOLimite() {
+        LeituraSensores base = leitura(TipoPeca.METALICA, 30.0, StatusReservatorio.NORMAL);
+        base.setDataHora(dataHora.minusSeconds(120));
+        when(leituraRepository.buscarJanelaAnterior(anyString(), any(Instant.class), any(Instant.class), any(Pageable.class)))
+                .thenReturn(List.of(base));
+
+        // (45 - 30) / 2 min = 7,5 %/min
+        LeituraSensores salva = leituraService.salvarLeitura(leitura(TipoPeca.METALICA, 45.0, StatusReservatorio.NORMAL));
+
+        assertThat(salva.getAlertas()).extracting(AlertaNivel::getTipoAlerta)
+                .containsExactly(TipoAlerta.ENCHIMENTO_RAPIDO);
+    }
+
+    @Test
+    void naoDeveAlertarEnchimentoQuandoNaoHaLeituraBaseNaJanela() {
+        // o mock devolve lista vazia por padrão
+        LeituraSensores salva = leituraService.salvarLeitura(leitura(TipoPeca.METALICA, 45.0, StatusReservatorio.NORMAL));
+
+        assertThat(salva.getAlertas()).isEmpty();
+    }
+
+    @Test
     void deveBuscarPorPeriodo() {
         LeituraSensores l = leitura(TipoPeca.METALICA, 50.0, null);
         when(leituraRepository.buscarPorPeriodo(any(Instant.class), any(Instant.class))).thenReturn(List.of(l));

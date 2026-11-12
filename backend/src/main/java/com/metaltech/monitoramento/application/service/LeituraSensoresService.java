@@ -1,5 +1,6 @@
 package com.metaltech.monitoramento.application.service;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.EnumSet;
 import java.util.List;
@@ -8,6 +9,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +39,11 @@ public class LeituraSensoresService {
             TipoAlerta.RESERVATORIO_ALTO,
             TipoAlerta.RESERVATORIO_CRITICO);
 
+    // Critério da CIDA (regra R1): enchimento acima de 5 %/min na janela anterior de 3 min.
+    static final Duration JANELA_TAXA = Duration.ofMinutes(3);
+    static final Duration JANELA_MINIMA = Duration.ofMinutes(1);
+    static final double LIMITE_ENCHIMENTO_PCT_POR_MIN = 5.0;
+
     private final LeituraSensoresRepository leituraRepository;
     private final AlertaNivelRepository alertaRepository;
 
@@ -55,6 +62,8 @@ public class LeituraSensoresService {
         if (alertaReservatorio != null && !alertaRepository.existeAtivo(alertaReservatorio, leitura.getDispositivoId())) {
             leitura.adicionarAlerta(criarAlerta(leitura, alertaReservatorio, mensagemReservatorio(leitura)));
         }
+
+        avaliarEnchimentoRapido(leitura);
 
         if (leitura.getTipoPeca() == TipoPeca.AMBAS) {
             leitura.adicionarAlerta(criarAlerta(leitura, TipoAlerta.CONTAGEM_ANOMALA,
@@ -156,6 +165,43 @@ public class LeituraSensoresService {
         AlertaNivel alerta = alertaRepository.findById(alertaId)
                 .orElseThrow(() -> new EntityNotFoundException("Alerta não encontrado: " + alertaId));
         alerta.marcarComoResolvido();
+    }
+
+    // Um alerta por episódio: abre quando a taxa passa do limite e resolve quando normaliza.
+    private void avaliarEnchimentoRapido(LeituraSensores leitura) {
+        Double taxa = calcularTaxaEnchimento(leitura);
+        String dispositivoId = leitura.getDispositivoId();
+
+        if (taxa != null && taxa > LIMITE_ENCHIMENTO_PCT_POR_MIN) {
+            if (!alertaRepository.existeAtivo(TipoAlerta.ENCHIMENTO_RAPIDO, dispositivoId)) {
+                String mensagem = String.format(Locale.ROOT,
+                        "Reservatório enchendo a %.1f%%/min (limite %.1f%%/min)", taxa, LIMITE_ENCHIMENTO_PCT_POR_MIN);
+                leitura.adicionarAlerta(criarAlerta(leitura, TipoAlerta.ENCHIMENTO_RAPIDO, mensagem));
+            }
+        } else {
+            alertaRepository.buscarAtivosPorTipos(EnumSet.of(TipoAlerta.ENCHIMENTO_RAPIDO), dispositivoId)
+                    .forEach(AlertaNivel::marcarComoResolvido);
+        }
+    }
+
+    // Taxa em %/min entre a primeira leitura dos 3 min anteriores e a atual; null se não houver base.
+    private Double calcularTaxaEnchimento(LeituraSensores leitura) {
+        Instant agora = leitura.getDataHora();
+        if (agora == null) {
+            return null;
+        }
+        List<LeituraSensores> janela = leituraRepository.buscarJanelaAnterior(
+                leitura.getDispositivoId(), agora.minus(JANELA_TAXA), agora, PageRequest.of(0, 1));
+        if (janela.isEmpty()) {
+            return null;
+        }
+        LeituraSensores base = janela.get(0);
+        Duration decorrido = Duration.between(base.getDataHora(), agora);
+        if (decorrido.compareTo(JANELA_MINIMA) < 0) {
+            return null;
+        }
+        double minutos = decorrido.toMillis() / 60000.0;
+        return (leitura.getNivelReservatorioPercentual() - base.getNivelReservatorioPercentual()) / minutos;
     }
 
     private void aplicarClassificacaoDaPeca(LeituraSensores leitura) {

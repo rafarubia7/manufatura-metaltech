@@ -152,7 +152,23 @@ class LeituraSensoresIntegracaoTest {
                 .andExpect(jsonPath("$.distribuicaoStatusReservatorio.ALERTA_ALTO.quantidade").value(1))
                 .andExpect(jsonPath("$.alertasPorTipo.RESERVATORIO_ALTO").value(1))
                 .andExpect(jsonPath("$.alertasPorTipo.CONTAGEM_ANOMALA").value(1))
-                .andExpect(jsonPath("$.alertasAtivos").value(2));
+                .andExpect(jsonPath("$.alertasPorTipo.ENCHIMENTO_RAPIDO").value(1))
+                .andExpect(jsonPath("$.alertasAtivos").value(3));
+    }
+
+    @Test
+    void deveAlertarEnchimentoRapidoEResolverQuandoATaxaNormaliza() throws Exception {
+        postar(corpoJson(0, "METALICA", 30.0, "NORMAL"));
+        postar(corpoJson(1, "METALICA", 40.0, "NORMAL")); // +10 %/min
+
+        mockMvc.perform(get("/api/v1/leituras/alertas"))
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].tipoAlerta").value("ENCHIMENTO_RAPIDO"));
+
+        postar(corpoJson(5, "METALICA", 40.5, "NORMAL")); // janela [2,5) vazia: sem base, alerta resolvido
+
+        mockMvc.perform(get("/api/v1/leituras/alertas"))
+                .andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Test
