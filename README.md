@@ -72,7 +72,8 @@ Ainda pendente:
 ├── dados/                       Ciência de Dados (CIDA)
 │   ├── gerar_dataset.py         geração do dataset simulado
 │   ├── analise_estatistica.py   estatísticas, outliers e gráficos
-│   ├── enviar_para_api.py       envio dos dados reais simulado para a API
+│   ├── enviar_para_api.py       envia o dataset simulado para a API e valida API x pandas
+│   ├── script_ponte_iolink.py   ponte IO-Link (HEX) para a API
 │   ├── leituras_simuladas.csv  dataset principal
 │   ├── eventos_simulados.csv   eventos/anomalias
 │   ├── graficos/               arquivos gráficos gerados
@@ -83,7 +84,6 @@ Ainda pendente:
 │   ├── relatorio_ciencia_dados.md  relatório técnico da CIDA
 │   └── roadmap_projeto.md      roadmap da etapa atual e próximos passos
 ├── docker-compose.yml           infraestrutura local do MySQL
-├── projeto_interdisciplinar.md  documento de contexto do projeto
 └── README.md
 ```
 
@@ -92,7 +92,7 @@ Ainda pendente:
 ### 1. Banco de dados
 
 ```powershell
-cd C:\Users\47419963878\Desktop\manufatura-metaltech
+cd <pasta-do-projeto>
 docker compose up -d mysql
 docker compose ps
 ```
@@ -103,10 +103,8 @@ Aguarde o status `healthy` e confirme a porta do host `3307`.
 
 ```powershell
 cd backend
-.
-\mvnw.cmd test
-.
-\mvnw.cmd spring-boot:run
+.\mvnw.cmd test
+.\mvnw.cmd spring-boot:run
 ```
 
 A API fica disponível em:

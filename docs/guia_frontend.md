@@ -340,8 +340,7 @@ Verifique se o Spring Boot está ativo:
 
 ```powershell
 cd backend
-.
-\mvnw.cmd spring-boot:run
+.\mvnw.cmd spring-boot:run
 ```
 
 ou com porta alternativa:
