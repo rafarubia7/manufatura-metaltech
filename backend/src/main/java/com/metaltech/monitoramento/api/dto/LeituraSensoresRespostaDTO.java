@@ -3,6 +3,9 @@ package com.metaltech.monitoramento.api.dto;
 import java.time.Instant;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,10 +15,14 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class LeituraSensoresResponseDTO {
+@JsonPropertyOrder({"id", "timestamp"})
+public class LeituraSensoresRespostaDTO {
 
     private Long id;
-    private Instant timestamp;
+
+    @JsonProperty("timestamp")
+    private Instant dataHora;
+
     private SensorDistanciaDTO sensorDistancia;
     private SensorIndutivoDTO sensorIndutivo;
     private SensorCapacitivoDTO sensorCapacitivo;
@@ -23,6 +30,5 @@ public class LeituraSensoresResponseDTO {
     private NivelReservatorioDTO nivelReservatorio;
     private String dispositivoId;
     private String versaoFirmware;
-    private List<AlertaNivelResponseDTO> alertas;
-
-    }
+    private List<AlertaNivelRespostaDTO> alertas;
+}

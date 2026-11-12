@@ -1,5 +1,32 @@
 package com.metaltech.monitoramento.application.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+
 import com.metaltech.monitoramento.domain.model.AlertaNivel;
 import com.metaltech.monitoramento.domain.model.LeituraSensores;
 import com.metaltech.monitoramento.domain.model.StatusReservatorio;
@@ -8,180 +35,157 @@ import com.metaltech.monitoramento.domain.model.TipoPeca;
 import com.metaltech.monitoramento.infrastructure.repository.AlertaNivelRepository;
 import com.metaltech.monitoramento.infrastructure.repository.LeituraSensoresRepository;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.InOrder;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityNotFoundException;
 
-import java.time.Instant;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
-@DataJpaTest
-@Import(LeituraSensoresService.class)
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class LeituraSensoresServiceTest {
 
-    @Autowired
-    private LeituraSensoresService leituraService;
-
-    @MockBean
+    @Mock
     private LeituraSensoresRepository leituraRepository;
 
-    @MockBean
+    @Mock
     private AlertaNivelRepository alertaRepository;
 
-    private LeituraSensores leitura;
-    private Instant timestamp;
+    @InjectMocks
+    private LeituraSensoresService leituraService;
+
+    private Instant dataHora;
 
     @BeforeEach
-    void setUp() {
-        timestamp = Instant.now();
-        leitura = new LeituraSensores(
-            1L,
-            timestamp,
-            12.5,
-            true,
-            0.85,
-            false,
-            0.12,
-            TipoPeca.METALICA,
-            75.5,
-            StatusReservatorio.NORMAL,
-            "ESP32-001",
-            "1.0.0",
-            Collections.emptyList()
-        );
+    void preparar() {
+        dataHora = Instant.parse("2026-11-03T10:00:00Z");
+        when(leituraRepository.save(any(LeituraSensores.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(alertaRepository.buscarAtivosPorTipos(anyCollection(), anyString()))
+                .thenReturn(List.of());
+    }
+
+    private LeituraSensores leitura(TipoPeca tipo, double percentual, StatusReservatorio statusInformado) {
+        return new LeituraSensores(null, dataHora, 12.5, true, 0.85, tipo == TipoPeca.AMBAS, 0.12,
+                tipo, percentual, statusInformado, "ESP32-001", "1.0.0", Collections.emptyList());
     }
 
     @Test
-    @Transactional
-    void deveSalvarLeituraComAlertas() {
-        // Configura repositório
-        when(leituraRepository.save(any(LeituraSensores.class))).thenReturn(leitura);
+    void naoDeveGerarAlertaParaLeituraNormal() {
+        LeituraSensores salva = leituraService.salvarLeitura(leitura(TipoPeca.METALICA, 75.5, StatusReservatorio.NORMAL));
 
-        // Executa serviço
-        LeituraSensores salva = leituraService.salvarLeitura(leitura);
-
-        // Verifica que o alerta foi gerado (NORMAL não gera alerta)
-        verify(leituraRepository).save(any(LeituraSensores.class));
+        assertThat(salva.getStatusReservatorio()).isEqualTo(StatusReservatorio.NORMAL);
+        assertThat(salva.getAlertas()).isEmpty();
+        verify(leituraRepository).save(salva);
     }
 
     @Test
-    @Transactional
-    void deveGerarAlertasReservatorioCritico() {
-        // Leitura com reservatório crítico
-        LeituraSensores leituraCritica = new LeituraSensores(
-            2L,
-            timestamp,
-            12.5,
-            true,
-            0.85,
-            false,
-            0.12,
-            TipoPeca.METALICA,
-            96.0, // > 95 = CRITICO
-            StatusReservatorio.CRITICO,
-            "ESP32-001",
-            "1.0.0",
-            Collections.emptyList()
-        );
+    void deveRecalcularStatusQuandoDispositivoInformaStatusIncorreto() {
+        LeituraSensores salva = leituraService.salvarLeitura(leitura(TipoPeca.METALICA, 97.0, StatusReservatorio.NORMAL));
 
-        when(leituraRepository.save(any(LeituraSensores.class))).thenReturn(leituraCritica);
-
-        LeituraSensores salva = leituraService.salvarLeitura(leituraCritica);
-
-        // Verifica que o alerta crítico foi gerado
-        verify(alertaRepository).save(any(AlertaNivel.class)); // Chamada para persistir alerta
+        assertThat(salva.getStatusReservatorio()).isEqualTo(StatusReservatorio.CRITICO);
     }
 
     @Test
-    @Transactional
-    void deveGerarAlertasConflitoSensores() {
-        // Leitura com conflito de sensores
-        LeituraSensores leituraConflito = new LeituraSensores(
-            3L,
-            timestamp,
-            12.5,
-            true,
-            0.85,
-            true,
-            0.90,
-            TipoPeca.AMBAS,
-            75.5,
-            StatusReservatorio.NORMAL,
-            "ESP32-001",
-            "1.0.0",
-            Collections.emptyList()
-        );
+    void deveGerarAlertaCriticoComDataHoraDaLeitura() {
+        LeituraSensores salva = leituraService.salvarLeitura(leitura(TipoPeca.METALICA, 96.0, null));
 
-        when(leituraRepository.save(any(LeituraSensores.class))).thenReturn(leituraConflito);
+        assertThat(salva.getAlertas()).hasSize(1);
+        AlertaNivel alerta = salva.getAlertas().get(0);
+        assertThat(alerta.getTipoAlerta()).isEqualTo(TipoAlerta.RESERVATORIO_CRITICO);
+        assertThat(alerta.getLeitura()).isSameAs(salva);
+        assertThat(alerta.getDataHoraAlerta()).isEqualTo(dataHora);
+        assertThat(alerta.getResolvido()).isFalse();
+        verify(alertaRepository, never()).save(any(AlertaNivel.class));
+    }
 
-        LeituraSensores salva = leituraService.salvarLeitura(leituraConflito);
+    @Test
+    void naoDeveDuplicarAlertaDeReservatorioJaAtivo() {
+        when(alertaRepository.existeAtivo(
+                TipoAlerta.RESERVATORIO_ALTO, "ESP32-001")).thenReturn(true);
 
-        // Verifica que alerta de conflito foi gerado
-        verify(alertaRepository).save(any(AlertaNivel.class));
+        LeituraSensores salva = leituraService.salvarLeitura(leitura(TipoPeca.METALICA, 85.0, StatusReservatorio.ALERTA_ALTO));
+
+        assertThat(salva.getAlertas()).isEmpty();
+    }
+
+    @Test
+    void deveResolverAlertasDeReservatorioQuandoNivelVoltaAoNormal() {
+        AlertaNivel aberto = new AlertaNivel(leitura(TipoPeca.METALICA, 85.0, null), dataHora,
+                TipoAlerta.RESERVATORIO_ALTO, "alto", false);
+        when(alertaRepository.buscarAtivosPorTipos(anyCollection(), eq("ESP32-001")))
+                .thenReturn(List.of(aberto));
+
+        leituraService.salvarLeitura(leitura(TipoPeca.METALICA, 30.0, StatusReservatorio.NORMAL));
+
+        assertThat(aberto.getResolvido()).isTrue();
+    }
+
+    @Test
+    void deveGerarAlertaDeConflitoParaPecaAmbas() {
+        LeituraSensores salva = leituraService.salvarLeitura(leitura(TipoPeca.AMBAS, 50.0, StatusReservatorio.NORMAL));
+
+        assertThat(salva.getAlertas())
+                .extracting(AlertaNivel::getTipoAlerta)
+                .containsExactly(TipoAlerta.CONTAGEM_ANOMALA);
+    }
+
+    @Test
+    void deveDerivarOTipoDaPecaDosSensores() {
+        LeituraSensores salva = leituraService.salvarLeitura(
+                leitura(TipoPeca.NAO_METALICA, 50.0, StatusReservatorio.NORMAL));
+
+        assertThat(salva.getTipoPeca()).isEqualTo(TipoPeca.METALICA);
+    }
+
+    @Test
+    void deveGerarAlertaDeEnchimentoRapidoQuandoATaxaExcedeOLimite() {
+        LeituraSensores base = leitura(TipoPeca.METALICA, 30.0, StatusReservatorio.NORMAL);
+        base.setDataHora(dataHora.minusSeconds(120));
+        when(leituraRepository.buscarJanelaAnterior(anyString(), any(Instant.class), any(Instant.class), any(Pageable.class)))
+                .thenReturn(List.of(base));
+
+        // (45 - 30) / 2 min = 7,5 %/min
+        LeituraSensores salva = leituraService.salvarLeitura(leitura(TipoPeca.METALICA, 45.0, StatusReservatorio.NORMAL));
+
+        assertThat(salva.getAlertas()).extracting(AlertaNivel::getTipoAlerta)
+                .containsExactly(TipoAlerta.ENCHIMENTO_RAPIDO);
+    }
+
+    @Test
+    void naoDeveAlertarEnchimentoQuandoNaoHaLeituraBaseNaJanela() {
+        // o mock devolve lista vazia por padrão
+        LeituraSensores salva = leituraService.salvarLeitura(leitura(TipoPeca.METALICA, 45.0, StatusReservatorio.NORMAL));
+
+        assertThat(salva.getAlertas()).isEmpty();
     }
 
     @Test
     void deveBuscarPorPeriodo() {
-        when(leituraRepository.findByTimestampBetween(any(Instant.class), any(Instant.class)))
-                .thenReturn(List.of(leitura));
+        LeituraSensores l = leitura(TipoPeca.METALICA, 50.0, null);
+        when(leituraRepository.buscarPorPeriodo(any(Instant.class), any(Instant.class))).thenReturn(List.of(l));
 
-        List<LeituraSensores> result = leituraService.buscarPorPeriodo(timestamp, timestamp);
-        
-        assertThat(result).hasSize(1);
-        verify(leituraRepository).findByTimestampBetween(any(Instant.class), any(Instant.class));
-    }
-
-    @Test
-    void deveBuscarPorTipoPeca() {
-        when(leituraRepository.findByTipoPeca(TipoPeca.METALICA))
-                .thenReturn(List.of(leitura));
-
-        List<LeituraSensores> result = leituraService.buscarPorTipoPeca(TipoPeca.METALICA);
-        
-        assertThat(result).hasSize(1);
-        verify(leituraRepository).findByTipoPeca(TipoPeca.METALICA);
+        assertThat(leituraService.buscarPorPeriodo(dataHora, dataHora)).hasSize(1);
     }
 
     @Test
     void deveListarTodasComPaginacao() {
-        Page<LeituraSensores> page = new PageImpl<>(List.of(leitura));
-        when(leituraRepository.findAllByOrderByTimestampDesc(any(Pageable.class)))
-                .thenReturn(page);
+        Page<LeituraSensores> page = new PageImpl<>(List.of(leitura(TipoPeca.METALICA, 50.0, null)));
+        when(leituraRepository.listarMaisRecentes(any(Pageable.class))).thenReturn(page);
 
-        Page<LeituraSensores> result = leituraService.listarTodas(Pageable.unpaged());
-        
-        assertThat(result.getContent()).hasSize(1);
-        verify(leituraRepository).findAllByOrderByTimestampDesc(any(Pageable.class));
+        assertThat(leituraService.listarTodas(Pageable.unpaged()).getContent()).hasSize(1);
     }
 
     @Test
-    void deveBuscarAlertasNaoResolvidos() {
-        List<AlertaNivel> alertas = List.of(new AlertaNivel(1L, leitura, Instant.now(), TipoAlerta.RESERVATORIO_ALTO, "Teste", false));
-        when(alertaRepository.findByResolvidoFalse()).thenReturn(alertas);
+    void deveResolverAlertaExistente() {
+        AlertaNivel alerta = new AlertaNivel(null, dataHora, TipoAlerta.RESERVATORIO_ALTO, "alto", false);
+        when(alertaRepository.findById(1L)).thenReturn(Optional.of(alerta));
 
-        List<AlertaNivel> result = leituraService.buscarAlertasNaoResolvidos();
-        
-        assertThat(result).hasSize(1);
-        verify(alertaRepository).findByResolvidoFalse();
-    }
-
-    @Test
-    void deveResolverAlerta() {
         leituraService.resolverAlerta(1L);
-        verify(alertaRepository).findById(1L);
+
+        assertThat(alerta.getResolvido()).isTrue();
+    }
+
+    @Test
+    void deveLancarExcecaoAoResolverAlertaInexistente() {
+        when(alertaRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> leituraService.resolverAlerta(99L))
+                .isInstanceOf(EntityNotFoundException.class);
     }
 }

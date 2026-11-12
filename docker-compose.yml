@@ -1,0 +1,38 @@
+# Ambiente local do MetalTech. As credenciais vêm do arquivo .env (copie de .env.example).
+#   Somente o banco (backend rodando via mvnw):  docker compose up -d mysql
+#   Banco + backend em contêiner:                docker compose up -d --build
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: metaltech-mysql
+    environment:
+      MYSQL_DATABASE: metaltech
+      MYSQL_USER: ${MYSQL_USER:-metaltech}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no arquivo .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no arquivo .env}
+    ports:
+      - "3307:3306"
+    volumes:
+      - metaltech-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u $$MYSQL_USER --password=$$MYSQL_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    container_name: metaltech-backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/metaltech?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USERNAME: ${MYSQL_USER:-metaltech}
+      DB_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no arquivo .env}
+      API_KEY: ${API_KEY:-}
+    ports:
+      - "8080:8080"
+
+volumes:
+  metaltech-mysql-data:

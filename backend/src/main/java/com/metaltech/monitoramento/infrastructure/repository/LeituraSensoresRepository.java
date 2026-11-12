@@ -1,13 +1,14 @@
 package com.metaltech.monitoramento.infrastructure.repository;
 
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
-import java.time.Instant;
-import java.util.List;
 
 import com.metaltech.monitoramento.domain.model.LeituraSensores;
 import com.metaltech.monitoramento.domain.model.StatusReservatorio;
@@ -15,58 +16,47 @@ import com.metaltech.monitoramento.domain.model.TipoPeca;
 
 public interface LeituraSensoresRepository extends JpaRepository<LeituraSensores, Long> {
 
-    List<LeituraSensores> findByTimestampBetween(Instant inicio, Instant fim);
+    Optional<LeituraSensores> findFirstByOrderByDataHoraDescIdDesc();
 
-    List<LeituraSensores> findByTipoPeca(TipoPeca tipo);
+    long countByTipoPeca(TipoPeca tipo);
 
-    List<LeituraSensores> findByStatusReservatorio(StatusReservatorio status);
+    // Leituras do dispositivo em [inicio, fim), da mais antiga para a mais nova.
+    @Query("SELECT l FROM LeituraSensores l WHERE l.dispositivoId = :dispositivoId "
+            + "AND l.dataHora >= :inicio AND l.dataHora < :fim ORDER BY l.dataHora ASC, l.id ASC")
+    List<LeituraSensores> buscarJanelaAnterior(@Param("dispositivoId") String dispositivoId,
+                                               @Param("inicio") Instant inicio,
+                                               @Param("fim") Instant fim,
+                                               Pageable paginacao);
 
-    Page<LeituraSensores> findAllByOrderByTimestampDesc(Pageable pageable);
+    @Query("SELECT l FROM LeituraSensores l ORDER BY l.dataHora")
+    List<LeituraSensores> listarEmOrdemCronologica();
 
-    @Query("SELECT l FROM LeituraSensores l WHERE l.timestamp >= :inicio AND l.timestamp <= :fim AND l.tipoPeca = :tipo")
-    List<LeituraSensores> findByTimestampAndTipoPeca(
-        @Param("inicio") Instant inicio,
-        @Param("fim") Instant fim,
-        @Param("tipo") TipoPeca tipo
-    );
+    @Query("SELECT l FROM LeituraSensores l WHERE l.dataHora BETWEEN :inicio AND :fim ORDER BY l.dataHora")
+    List<LeituraSensores> buscarPorPeriodo(@Param("inicio") Instant inicio, @Param("fim") Instant fim);
 
-    @Query("SELECT l FROM LeituraSensores l WHERE l.timestamp >= :inicio AND l.timestamp <= :fim AND l.statusReservatorio = :status")
-    List<LeituraSensores> findByTimestampAndStatusReservatorio(
-        @Param("inicio") Instant inicio,
-        @Param("fim") Instant fim,
-        @Param("status") StatusReservatorio status
-    );
+    @Query("SELECT l FROM LeituraSensores l WHERE l.tipoPeca = :tipo")
+    List<LeituraSensores> buscarPorTipoPeca(@Param("tipo") TipoPeca tipo);
 
-    @Query("SELECT l FROM LeituraSensores l WHERE l.dispositivoId = :dispositivoId ORDER BY l.timestamp DESC")
-    List<LeituraSensores> findByDispositivoIdOrderByTimestampDesc(
-        @Param("dispositivoId") String dispositivoId
-    );
+    @Query("SELECT l FROM LeituraSensores l WHERE l.statusReservatorio = :status")
+    List<LeituraSensores> buscarPorStatusReservatorio(@Param("status") StatusReservatorio status);
 
-    // Novos métodos com Pageable para o Controller
-    @Query("SELECT l FROM LeituraSensores l WHERE l.timestamp >= :inicio AND l.timestamp <= :fim AND l.tipoPeca = :tipo")
-    Page<LeituraSensores> findByTimestampAndTipoPeca(
-        @Param("inicio") Instant inicio,
-        @Param("fim") Instant fim,
-        @Param("tipo") TipoPeca tipo,
-        Pageable pageable
-    );
+    @Query("SELECT l FROM LeituraSensores l ORDER BY l.dataHora DESC")
+    Page<LeituraSensores> listarMaisRecentes(Pageable paginacao);
 
-    @Query("SELECT l FROM LeituraSensores l WHERE l.timestamp >= :inicio AND l.timestamp <= :fim AND l.statusReservatorio = :status")
-    Page<LeituraSensores> findByTimestampAndStatusReservatorio(
-        @Param("inicio") Instant inicio,
-        @Param("fim") Instant fim,
-        @Param("status") StatusReservatorio status,
-        Pageable pageable
-    );
+    @Query("SELECT l FROM LeituraSensores l WHERE l.dataHora BETWEEN :inicio AND :fim")
+    Page<LeituraSensores> buscarPorPeriodo(@Param("inicio") Instant inicio, @Param("fim") Instant fim, Pageable paginacao);
 
-    @Query("SELECT l FROM LeituraSensores l WHERE l.timestamp >= :inicio AND l.timestamp <= :fim")
-    Page<LeituraSensores> findByTimestampBetween(
-        @Param("inicio") Instant inicio,
-        @Param("fim") Instant fim,
-        Pageable pageable
-    );
+    @Query("SELECT l FROM LeituraSensores l WHERE l.dataHora BETWEEN :inicio AND :fim AND l.tipoPeca = :tipo")
+    Page<LeituraSensores> buscarPorPeriodoETipoPeca(@Param("inicio") Instant inicio, @Param("fim") Instant fim,
+                                                    @Param("tipo") TipoPeca tipo, Pageable paginacao);
 
-    Page<LeituraSensores> findByTipoPeca(TipoPeca tipo, Pageable pageable);
+    @Query("SELECT l FROM LeituraSensores l WHERE l.dataHora BETWEEN :inicio AND :fim AND l.statusReservatorio = :status")
+    Page<LeituraSensores> buscarPorPeriodoEStatusReservatorio(@Param("inicio") Instant inicio, @Param("fim") Instant fim,
+                                                              @Param("status") StatusReservatorio status, Pageable paginacao);
 
-    Page<LeituraSensores> findByStatusReservatorio(StatusReservatorio status, Pageable pageable);
+    @Query("SELECT l FROM LeituraSensores l WHERE l.tipoPeca = :tipo")
+    Page<LeituraSensores> buscarPorTipoPeca(@Param("tipo") TipoPeca tipo, Pageable paginacao);
+
+    @Query("SELECT l FROM LeituraSensores l WHERE l.statusReservatorio = :status")
+    Page<LeituraSensores> buscarPorStatusReservatorio(@Param("status") StatusReservatorio status, Pageable paginacao);
 }

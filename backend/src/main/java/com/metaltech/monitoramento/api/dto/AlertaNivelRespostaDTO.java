@@ -11,10 +11,12 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class AlertaNivelResponseDTO {
+public class AlertaNivelRespostaDTO {
 
     private Long id;
-    private Instant timestampAlertado;
+    private Long leituraId;
+    private String dispositivoId;
+    private Instant dataHoraAlerta;
     private String tipoAlerta;
     private String mensagem;
     private Boolean resolvido;

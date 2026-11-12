@@ -1,21 +1,24 @@
 package com.metaltech.monitoramento.domain.model;
 
-import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "leituras_sensores", indexes = {
-    @Index(name = "idx_timestamp", columnList = "timestamp_leitura"),
-    @Index(name = "idx_tipo_peca", columnList = "tipo_peca"),
-    @Index(name = "idx_status_reservatorio", columnList = "status_reservatorio"),
-    @Index(name = "idx_dispositivo_id", columnList = "dispositivo_id")
-})
+@Table(name = "leituras_sensores")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -26,7 +29,7 @@ public class LeituraSensores {
     private Long id;
 
     @Column(name = "timestamp_leitura", nullable = false, updatable = false)
-    private Instant timestamp;
+    private Instant dataHora;
 
     @Column(name = "distancia_cm", nullable = false)
     private Double distanciaCm;
@@ -43,14 +46,14 @@ public class LeituraSensores {
     @Column(name = "capacitivo_intensidade")
     private Double capacitivoIntensidade;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = TipoPecaConverter.class)
     @Column(name = "tipo_peca", nullable = false)
     private TipoPeca tipoPeca;
 
     @Column(name = "nivel_reservatorio_percentual", nullable = false)
     private Double nivelReservatorioPercentual;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = StatusReservatorioConverter.class)
     @Column(name = "status_reservatorio", nullable = false)
     private StatusReservatorio statusReservatorio;
 
@@ -64,20 +67,20 @@ public class LeituraSensores {
     private List<AlertaNivel> alertas = new ArrayList<>();
 
     public LeituraSensores(Long id,
-                          Instant timestamp,
-                          Double distanciaCm,
-                          Boolean indutivoDetectouMetal,
-                          Double indutivoIntensidade,
-                          Boolean capacitivoDetectouNaoMetal,
-                          Double capacitivoIntensidade,
-                          TipoPeca tipoPeca,
-                          Double nivelReservatorioPercentual,
-                          StatusReservatorio statusReservatorio,
-                          String dispositivoId,
-                          String versaoFirmware,
-                          List<AlertaNivel> alertas) {
+                           Instant dataHora,
+                           Double distanciaCm,
+                           Boolean indutivoDetectouMetal,
+                           Double indutivoIntensidade,
+                           Boolean capacitivoDetectouNaoMetal,
+                           Double capacitivoIntensidade,
+                           TipoPeca tipoPeca,
+                           Double nivelReservatorioPercentual,
+                           StatusReservatorio statusReservatorio,
+                           String dispositivoId,
+                           String versaoFirmware,
+                           List<AlertaNivel> alertas) {
         this.id = id;
-        this.timestamp = timestamp;
+        this.dataHora = dataHora;
         this.distanciaCm = distanciaCm;
         this.indutivoDetectouMetal = indutivoDetectouMetal;
         this.indutivoIntensidade = indutivoIntensidade;
@@ -88,7 +91,7 @@ public class LeituraSensores {
         this.statusReservatorio = statusReservatorio;
         this.dispositivoId = dispositivoId;
         this.versaoFirmware = versaoFirmware;
-        this.alertas = alertas == null ? new ArrayList<>() : new ArrayList<>(alertas);
+        setAlertas(alertas);
     }
 
     public void setAlertas(List<AlertaNivel> alertas) {
@@ -96,19 +99,12 @@ public class LeituraSensores {
     }
 
     public void adicionarAlerta(AlertaNivel alerta) {
-        if (this.alertas == null) {
-            this.alertas = new ArrayList<>();
-        }
-        this.alertas.add(alerta);
+        alertas.add(alerta);
         alerta.setLeitura(this);
     }
 
     public void removerAlerta(AlertaNivel alerta) {
-        if (this.alertas == null) {
-            return;
-        }
-        this.alertas.remove(alerta);
-        if (alerta != null) {
+        if (alerta != null && alertas.remove(alerta)) {
             alerta.setLeitura(null);
         }
     }

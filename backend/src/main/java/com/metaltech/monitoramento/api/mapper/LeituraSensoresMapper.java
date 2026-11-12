@@ -1,8 +1,12 @@
 package com.metaltech.monitoramento.api.mapper;
 
-import com.metaltech.monitoramento.api.dto.AlertaNivelResponseDTO;
+import java.util.List;
+
+import org.springframework.stereotype.Component;
+
+import com.metaltech.monitoramento.api.dto.AlertaNivelRespostaDTO;
 import com.metaltech.monitoramento.api.dto.LeituraSensoresDTO;
-import com.metaltech.monitoramento.api.dto.LeituraSensoresResponseDTO;
+import com.metaltech.monitoramento.api.dto.LeituraSensoresRespostaDTO;
 import com.metaltech.monitoramento.api.dto.NivelReservatorioDTO;
 import com.metaltech.monitoramento.api.dto.PecaDTO;
 import com.metaltech.monitoramento.api.dto.SensorCapacitivoDTO;
@@ -11,126 +15,96 @@ import com.metaltech.monitoramento.api.dto.SensorIndutivoDTO;
 import com.metaltech.monitoramento.domain.model.AlertaNivel;
 import com.metaltech.monitoramento.domain.model.LeituraSensores;
 import com.metaltech.monitoramento.domain.model.StatusReservatorio;
-import com.metaltech.monitoramento.domain.model.TipoAlerta;
 import com.metaltech.monitoramento.domain.model.TipoPeca;
-import java.util.List;
-import java.util.stream.Collectors;
-import org.springframework.stereotype.Component;
 
 @Component
 public class LeituraSensoresMapper {
 
-    public LeituraSensores toEntity(LeituraSensoresDTO dto) {
+    private static final double CAPACIDADE_MAXIMA = 100.0;
+
+    public LeituraSensores paraEntidade(LeituraSensoresDTO dto) {
         if (dto == null) {
             return null;
         }
-
-        LeituraSensores entity = new LeituraSensores();
-        entity.setTimestamp(dto.getTimestamp());
-        entity.setDistanciaCm(dto.getSensorDistancia() != null ? dto.getSensorDistancia().getValor() : null);
-        entity.setIndutivoDetectouMetal(dto.getSensorIndutivo() != null ? dto.getSensorIndutivo().getDetectouMetal() : null);
-        entity.setIndutivoIntensidade(dto.getSensorIndutivo() != null ? dto.getSensorIndutivo().getIntensidade() : null);
-        entity.setCapacitivoDetectouNaoMetal(dto.getSensorCapacitivo() != null ? dto.getSensorCapacitivo().getDetectouNaoMetal() : null);
-        entity.setCapacitivoIntensidade(dto.getSensorCapacitivo() != null ? dto.getSensorCapacitivo().getIntensidade() : null);
-        entity.setTipoPeca(parseTipoPeca(dto.getPeca() != null ? dto.getPeca().getTipo() : null));
-        entity.setNivelReservatorioPercentual(dto.getNivelReservatorio() != null ? dto.getNivelReservatorio().getPercentual() : null);
-        entity.setStatusReservatorio(parseStatusReservatorio(dto.getNivelReservatorio() != null ? dto.getNivelReservatorio().getStatus() : null));
-        entity.setDispositivoId(dto.getDispositivoId());
-        entity.setVersaoFirmware(dto.getVersaoFirmware());
-        return entity;
+        LeituraSensores leitura = new LeituraSensores();
+        leitura.setDataHora(dto.getDataHora());
+        leitura.setDistanciaCm(dto.getSensorDistancia().getValor());
+        leitura.setIndutivoDetectouMetal(dto.getSensorIndutivo().getDetectouMetal());
+        leitura.setIndutivoIntensidade(dto.getSensorIndutivo().getIntensidade());
+        leitura.setCapacitivoDetectouNaoMetal(dto.getSensorCapacitivo().getDetectouNaoMetal());
+        leitura.setCapacitivoIntensidade(dto.getSensorCapacitivo().getIntensidade());
+        leitura.setTipoPeca(converterTipoPeca(dto.getPeca().getTipo()));
+        leitura.setNivelReservatorioPercentual(dto.getNivelReservatorio().getPercentual());
+        leitura.setStatusReservatorio(converterStatusReservatorio(dto.getNivelReservatorio().getStatus()));
+        leitura.setDispositivoId(dto.getDispositivoId());
+        leitura.setVersaoFirmware(dto.getVersaoFirmware());
+        return leitura;
     }
 
-    public LeituraSensoresResponseDTO toResponseDto(LeituraSensores entity) {
-        if (entity == null) {
+    public LeituraSensoresRespostaDTO paraRespostaDto(LeituraSensores leitura) {
+        if (leitura == null) {
             return null;
         }
-
-        LeituraSensoresResponseDTO dto = new LeituraSensoresResponseDTO();
-        dto.setId(entity.getId());
-        dto.setTimestamp(entity.getTimestamp());
-
-        SensorDistanciaDTO distancia = new SensorDistanciaDTO();
-        distancia.setValor(entity.getDistanciaCm());
-        distancia.setUnidade("cm");
-        distancia.setStatus("OK");
-        dto.setSensorDistancia(distancia);
-
-        SensorIndutivoDTO indutivo = new SensorIndutivoDTO();
-        indutivo.setDetectouMetal(entity.getIndutivoDetectouMetal());
-        indutivo.setIntensidade(entity.getIndutivoIntensidade());
-        indutivo.setStatus("OK");
-        dto.setSensorIndutivo(indutivo);
-
-        SensorCapacitivoDTO capacitivo = new SensorCapacitivoDTO();
-        capacitivo.setDetectouNaoMetal(entity.getCapacitivoDetectouNaoMetal());
-        capacitivo.setIntensidade(entity.getCapacitivoIntensidade());
-        capacitivo.setStatus("OK");
-        dto.setSensorCapacitivo(capacitivo);
-
-        PecaDTO peca = new PecaDTO();
-        peca.setId("peca-" + entity.getId());
-        peca.setTipo(entity.getTipoPeca() != null ? entity.getTipoPeca().name() : null);
-        peca.setTimestampDetectado(entity.getTimestamp());
-        dto.setPeca(peca);
-
-        NivelReservatorioDTO nivel = new NivelReservatorioDTO();
-        nivel.setNivelAtual(entity.getNivelReservatorioPercentual());
-        nivel.setCapacidadeMaxima(100.0);
-        nivel.setPercentual(entity.getNivelReservatorioPercentual());
-        nivel.setStatus(entity.getStatusReservatorio() != null ? entity.getStatusReservatorio().name() : "NORMAL");
-        dto.setNivelReservatorio(nivel);
-
-        dto.setDispositivoId(entity.getDispositivoId());
-        dto.setVersaoFirmware(entity.getVersaoFirmware());
-
-        if (entity.getAlertas() == null || entity.getAlertas().isEmpty()) {
-            dto.setAlertas(List.of());
-        } else {
-            dto.setAlertas(entity.getAlertas().stream().map(this::toResponseDto).collect(Collectors.toList()));
-        }
-
+        LeituraSensoresRespostaDTO dto = new LeituraSensoresRespostaDTO();
+        dto.setId(leitura.getId());
+        dto.setDataHora(leitura.getDataHora());
+        dto.setSensorDistancia(new SensorDistanciaDTO(leitura.getDistanciaCm(), "cm", "OK"));
+        dto.setSensorIndutivo(new SensorIndutivoDTO(leitura.getIndutivoDetectouMetal(), leitura.getIndutivoIntensidade(), "OK"));
+        dto.setSensorCapacitivo(new SensorCapacitivoDTO(leitura.getCapacitivoDetectouNaoMetal(), leitura.getCapacitivoIntensidade(), "OK"));
+        dto.setPeca(new PecaDTO("peca-" + leitura.getId(),
+                leitura.getTipoPeca() != null ? leitura.getTipoPeca().name() : null,
+                leitura.getDataHora()));
+        dto.setNivelReservatorio(new NivelReservatorioDTO(
+                leitura.getNivelReservatorioPercentual(),
+                CAPACIDADE_MAXIMA,
+                leitura.getNivelReservatorioPercentual(),
+                leitura.getStatusReservatorio() != null ? leitura.getStatusReservatorio().name() : StatusReservatorio.NORMAL.name()));
+        dto.setDispositivoId(leitura.getDispositivoId());
+        dto.setVersaoFirmware(leitura.getVersaoFirmware());
+        dto.setAlertas(paraListaAlertasRespostaDto(leitura.getAlertas()));
         return dto;
     }
 
-    public List<LeituraSensoresResponseDTO> toResponseDtoList(List<LeituraSensores> entities) {
-        if (entities == null) {
+    public AlertaNivelRespostaDTO paraRespostaDto(AlertaNivel alerta) {
+        if (alerta == null) {
             return null;
         }
-        return entities.stream().map(this::toResponseDto).collect(Collectors.toList());
-    }
-
-    public AlertaNivelResponseDTO toResponseDto(AlertaNivel entity) {
-        if (entity == null) {
-            return null;
+        AlertaNivelRespostaDTO dto = new AlertaNivelRespostaDTO();
+        dto.setId(alerta.getId());
+        if (alerta.getLeitura() != null) {
+            dto.setLeituraId(alerta.getLeitura().getId());
+            dto.setDispositivoId(alerta.getLeitura().getDispositivoId());
         }
-
-        AlertaNivelResponseDTO dto = new AlertaNivelResponseDTO();
-        dto.setId(entity.getId());
-        dto.setTimestampAlertado(entity.getTimestampAlertado());
-        dto.setTipoAlerta(entity.getTipoAlerta() != null ? entity.getTipoAlerta().name() : null);
-        dto.setMensagem(entity.getMensagem());
-        dto.setResolvido(entity.getResolvido());
+        dto.setDataHoraAlerta(alerta.getDataHoraAlerta());
+        dto.setTipoAlerta(alerta.getTipoAlerta() != null ? alerta.getTipoAlerta().name() : null);
+        dto.setMensagem(alerta.getMensagem());
+        dto.setResolvido(alerta.getResolvido());
         return dto;
     }
 
-    public List<AlertaNivelResponseDTO> toAlertaResponseDtoList(List<AlertaNivel> entities) {
-        if (entities == null) {
-            return null;
+    public List<AlertaNivelRespostaDTO> paraListaAlertasRespostaDto(List<AlertaNivel> alertas) {
+        if (alertas == null) {
+            return List.of();
         }
-        return entities.stream().map(this::toResponseDto).collect(Collectors.toList());
+        return alertas.stream().map(this::paraRespostaDto).toList();
     }
 
-    private TipoPeca parseTipoPeca(String value) {
-        if (value == null || value.isBlank()) {
+    private TipoPeca converterTipoPeca(String valor) {
+        if (valor == null || valor.isBlank()) {
             return TipoPeca.DESCONHECIDA;
         }
-        return TipoPeca.valueOf(value);
+        return TipoPeca.valueOf(valor);
     }
 
-    private StatusReservatorio parseStatusReservatorio(String value) {
-        if (value == null || value.isBlank()) {
-            return StatusReservatorio.NORMAL;
+    // O status do dispositivo é só informativo (o service recalcula); valor desconhecido vira nulo.
+    private StatusReservatorio converterStatusReservatorio(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return null;
         }
-        return StatusReservatorio.valueOf(value);
+        try {
+            return StatusReservatorio.valueOf(valor);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }
