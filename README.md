@@ -1,6 +1,6 @@
 # MetalTech Monitoramento Industrial
 
-Monitoramento de uma esteira de triagem de peças com sensores de distância, indutivo e capacitivo: API REST em Java/Spring Boot e pipeline de Ciência de Dados em Python.
+Monitoramento de uma esteira de triagem de peças com sensores de distância, indutivo e capacitivo. O projeto inclui uma API REST em Java/Spring Boot e uma base de pipeline de Ciência de Dados em Python para geração, análise e validação das leituras.
 
 ## Objetivo
 
@@ -8,93 +8,200 @@ Coletar, armazenar, analisar e disponibilizar as leituras dos sensores para:
 
 - classificar peças (metálica / não metálica);
 - monitorar o nível do reservatório;
-- gerar alertas operacionais.
+- gerar alertas operacionais;
+- alimentar dashboards e análise técnica.
 
 ## Stack
 
-- **Back-end:** Java 17, Spring Boot 3.2, Spring Data JPA, PostgreSQL 15, Flyway, Springdoc OpenAPI, H2 (testes), Maven Wrapper
-- **Ciência de Dados:** Python 3.11+, pandas, numpy, scipy, matplotlib, requests
-- **Infra local:** Docker Compose
+- Back-end: Java 17, Spring Boot 3.2, Spring Data JPA, MySQL 8.0, Flyway, Springdoc OpenAPI, H2 (testes), Maven Wrapper
+- Ciência de Dados: Python 3.11+, pandas, numpy, scipy, matplotlib, requests
+- Infra local: Docker Compose com MySQL
 
-## Estrutura
+## Estado atual do projeto
+
+### Back-end
+Status: funcional e validado em ambiente local com MySQL.
+
+Concluído:
+- API REST estruturada em Java/Spring Boot
+- entidades, DTOs, repositórios e serviços baseados em domínio
+- lógica de negócio para leitura de sensores e alertas
+- cálculo do status do reservatório e regras de deduplicação
+- estatísticas operacionais e endpoints de consulta
+- testes automatizados do backend com sucesso
+
+Pendente de refinamento:
+- revisão final de documentação e onboarding
+- consolidar ambiente de execução e operacionalização
+- melhorar observabilidade e robustez de produção
+
+### Ciência de Dados
+Status: funcional para dados simulados, pronto para análise e integração com API.
+
+Concluído:
+- geração de dataset sintético
+- análise estatística exploratória
+- extração de métricas operacionais
+- detecção de padrões e outliers
+- geração de gráficos e resultados em arquivos estruturados
+
+Pendente:
+- adaptar o pipeline para dados reais industriais
+- validar a camada de conversão e normalização de payloads reais
+- concluir relatório técnico final com foco em uso real
+
+### Front-end e próximas etapas
+Status: não implementado nesta fase.
+
+Ainda pendente:
+- dashboard web
+- visualização de alertas e estatísticas
+- integrações front-end → API
+- deploy/infra de nuvem
+- realidade aumentada
+
+## Estrutura do repositório
 
 ```text
 .
 ├── backend/                     API REST (Spring Boot)
 │   ├── src/main/java/...        domain · application · api · infrastructure
-│   ├── src/main/resources/      application.yml, migrações Flyway
-│   ├── src/test/                testes unitários, de controller e de integração
+│   ├── src/main/resources/      application.yml, Flyway e configs
+│   ├── src/test/                testes unitários e de integração
 │   └── Dockerfile
 ├── dados/                       Ciência de Dados (CIDA)
-│   ├── gerar_dataset.py         simulação da esteira (seed fixa)
-│   ├── analise_estatistica.py   estatística, outliers e gráficos
-│   ├── enviar_para_api.py       POST das leituras na API + validação
-│   ├── leituras_simuladas.csv   dataset (~10 mil leituras, 7 dias)
-│   ├── eventos_simulados.csv    anomalias injetadas (verdade-terreno)
-│   ├── graficos/                gráficos técnicos (PNG)
-│   └── resultados/              estatísticas, outliers e validação
+│   ├── gerar_dataset.py         geração do dataset simulado
+│   ├── analise_estatistica.py   estatísticas, outliers e gráficos
+│   ├── enviar_para_api.py       envio dos dados reais simulado para a API
+│   ├── leituras_simuladas.csv  dataset principal
+│   ├── eventos_simulados.csv   eventos/anomalias
+│   ├── graficos/               arquivos gráficos gerados
+│   └── resultados/             JSON, CSV, resumo e validação
 ├── docs/
-│   ├── guia_execucao.md         passo a passo e status do projeto
-│   └── relatorio_ciencia_dados.md  relatório técnico final da CIDA
-└── docker-compose.yml           PostgreSQL (+ back-end opcional)
+│   ├── guia_execucao.md        guia de execução do projeto
+│   ├── guia_frontend.md        guia de integração do front-end
+│   ├── relatorio_ciencia_dados.md  relatório técnico da CIDA
+│   └── roadmap_projeto.md      roadmap da etapa atual e próximos passos
+├── docker-compose.yml           infraestrutura local do MySQL
+├── projeto_interdisciplinar.md  documento de contexto do projeto
+└── README.md
 ```
 
 ## Execução rápida
 
-```powershell
-docker compose up -d postgres                 # banco
-cd backend; .\mvnw.cmd test                   # 36 testes
-.\mvnw.cmd spring-boot:run                    # API em http://localhost:8080
+### 1. Banco de dados
 
-cd ..\dados
-python -m venv .venv; .venv\Scripts\pip install -r requirements.txt
-.venv\Scripts\python gerar_dataset.py
-.venv\Scripts\python analise_estatistica.py
-.venv\Scripts\python enviar_para_api.py       # POST real + validação 22/22
+```powershell
+cd C:\Users\47419963878\Desktop\manufatura-metaltech
+docker compose up -d mysql
+docker compose ps
 ```
 
-Detalhes e solução de problemas em [docs/guia_execucao.md](docs/guia_execucao.md).
+Aguarde o status `healthy` e confirme a porta do host `3307`.
 
-## Endpoints
+### 2. Back-end
+
+```powershell
+cd backend
+.
+\mvnw.cmd test
+.
+\mvnw.cmd spring-boot:run
+```
+
+A API fica disponível em:
+
+- Swagger: http://localhost:8080/swagger-ui.html
+- Base da API: http://localhost:8080/api/v1
+
+Se a porta 8080 estiver ocupada:
+
+```powershell
+cd backend
+$env:SERVER_PORT = "8081"
+.\mvnw.cmd spring-boot:run
+```
+
+### 3. Python / CIDA
+
+```powershell
+cd dados
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+.venv\Scripts\python gerar_dataset.py
+.venv\Scripts\python analise_estatistica.py
+.venv\Scripts\python enviar_para_api.py
+```
+
+## Endpoints principais
 
 | Método | Rota | Descrição |
 |---|---|---|
-| POST | `/api/v1/leituras` | Registra uma leitura (201). O status do reservatório é recalculado pelo back-end |
-| GET | `/api/v1/leituras` | Lista paginada. Filtros: `inicio`, `fim`, `tipoPeca`, `statusReservatorio` |
-| GET | `/api/v1/leituras/{id}` | Busca uma leitura |
-| GET | `/api/v1/leituras/alertas` | Alertas não resolvidos |
-| PUT | `/api/v1/leituras/alertas/{id}/resolver` | Resolve um alerta (204; 404 se não existir) |
-| GET | `/api/v1/leituras/estatisticas` | Indicadores do período (`inicio`/`fim`) ou de todo o histórico |
+| POST | `/api/v1/leituras` | Registra uma leitura de sensores |
+| GET | `/api/v1/leituras` | Lista leituras com paginação e filtros |
+| GET | `/api/v1/leituras/{id}` | Busca leitura por id |
+| GET | `/api/v1/leituras/alertas` | Lista alertas pendentes |
+| PUT | `/api/v1/leituras/alertas/{id}/resolver` | Resolve um alerta |
+| GET | `/api/v1/leituras/estatisticas` | Retorna indicadores operacionais |
 
-A listagem paginada responde com `conteudo`, `paginacao`, `totalElementos`, `totalPaginas`, `primeira`, `ultima` e `quantidadeElementos`. Os parâmetros de paginação seguem o padrão do Spring (`page`, `size`, `sort=dataHora,asc`). Erros seguem o formato `{dataHora, codigoErro, mensagem, caminho, detalhes}`.
-
-Documentação interativa: http://localhost:8080/swagger-ui.html
+Documentação interativa:
+- http://localhost:8080/swagger-ui.html
 
 ## Regras de negócio
 
-- **Status do reservatório:**
-  - baixo: < 20%;
-  - normal: 20–80%;
-  - alto: > 80%;
-  - crítico: ≥ 95%.
-- **Alertas de reservatório:** um alerta ativo por tipo e dispositivo. É resolvido automaticamente quando a condição deixa de valer.
-- **Conflito de sensores (peça `AMBAS`):** sempre gera alerta `CONTAGEM_ANOMALA`.
-- **Estatísticas:** quartis por interpolação linear e desvio padrão amostral, as mesmas convenções do pandas.
+- Status do reservatório:
+  - baixo: < 20%
+  - normal: 20–80%
+  - alto: > 80%
+  - crítico: ≥ 95%
+- Alertas automáticos são gerados pela regra de negócio do backend
+- Quando a condição de alerta deixa de existir, o alerta pode ser resolvido automaticamente
+- Conflitos entre sensores são considerados anomalias e devem gerar alertas correspondentes
 
 ## Ciência de Dados
 
-O dataset é gerado por uma simulação orientada a eventos, com:
+O pipeline de CIDA foi estruturado para:
 
-- turnos e lotes de produção;
-- intensidade dos sensores decaindo com a distância;
-- reservatório enchendo gradativamente e esvaziado por comporta;
-- gargalos, deriva de sensor, falhas de conexão e esvaziamentos bruscos.
+- gerar um dataset reproduzível e consistente
+- analisar a operação da esteira e o comportamento do reservatório
+- identificar padrões, anomalias e outliers
+- validar o contrato da API com o dataset simulado
 
-Resultados, gráficos e conclusões estão em [docs/relatorio_ciencia_dados.md](docs/relatorio_ciencia_dados.md).
+A análise técnica e os relatórios encontram-se em:
 
-## Status
+- [docs/relatorio_ciencia_dados.md](docs/relatorio_ciencia_dados.md)
 
-- Back-end funcional e validado contra PostgreSQL (36 testes automatizados).
-- Integração CIDA → API validada: 9.965 leituras via POST, 22/22 indicadores conferidos.
-- Relatório técnico de Ciência de Dados concluído.
-- Próximas etapas: front-end, nuvem e realidade aumentada (ver guia de execução).
+## Status final da etapa atual
+
+### Concluído
+- backend funcional com MySQL real
+- testes automatizados do backend executando com sucesso
+- pipeline de dados simulados validado
+- integração CIDA → API validação operacional
+- documentação de uso e integração organizada
+
+### Pendência de continuidade
+- front-end/dashboard
+- nuvem/deploy
+- autenticação e observabilidade
+- adaptação da CIDA para dados reais industriais
+- refinamento final da documentação acadêmica e operacional
+
+## Caminho recomendado para a próxima etapa
+
+1. Validar o backend local com MySQL em funcionamento
+2. Validar a CIDA com dados simulados e a API
+3. Concluir a documentação operacional e onboarding
+4. Desenvolver o front-end consumindo a API REST
+5. Planejar a adaptação para dados reais do processo industrial
+
+## Observações importantes
+
+- O projeto usa MySQL por padrão na versão atual; PostgreSQL deixou de ser a referência principal da execução local.
+- O Docker é usado para o banco e não para o front-end.
+- Para outros PCs da rede, o front-end deve usar o IP do PC que roda o backend, e não `localhost`.
+
+Mais detalhes e instruções em:
+- [docs/guia_execucao.md](docs/guia_execucao.md)
+- [docs/guia_frontend.md](docs/guia_frontend.md)
+- [docs/roadmap_projeto.md](docs/roadmap_projeto.md)

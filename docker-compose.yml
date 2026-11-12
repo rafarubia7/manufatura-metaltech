@@ -1,36 +1,37 @@
 # Ambiente local do MetalTech
-#   Somente o banco (backend rodando via ./mvnw):  docker compose up -d postgres
+#   Somente o banco (backend rodando via ./mvnw):  docker compose up -d mysql
 #   Banco + backend em contêiner:                  docker compose up -d --build
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: metaltech-postgres
+  mysql:
+    image: mysql:8.0
+    container_name: metaltech-mysql
     environment:
-      POSTGRES_DB: metaltech
-      POSTGRES_USER: metaltech
-      POSTGRES_PASSWORD: metaltech123
+      MYSQL_DATABASE: metaltech
+      MYSQL_USER: metaltech
+      MYSQL_PASSWORD: metaltech123
+      MYSQL_ROOT_PASSWORD: root123
     ports:
-      - "5432:5432"
+      - "3307:3306"
     volumes:
-      - metaltech-pgdata:/var/lib/postgresql/data
+      - metaltech-mysql-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U metaltech -d metaltech"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u $$MYSQL_USER --password=$$MYSQL_PASSWORD --silent"]
       interval: 5s
-      timeout: 3s
-      retries: 10
+      timeout: 5s
+      retries: 20
 
   backend:
     build: ./backend
     container_name: metaltech-backend
     depends_on:
-      postgres:
+      mysql:
         condition: service_healthy
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/metaltech
+      DB_URL: jdbc:mysql://mysql:3306/metaltech?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       DB_USERNAME: metaltech
       DB_PASSWORD: metaltech123
     ports:
       - "8080:8080"
 
 volumes:
-  metaltech-pgdata:
+  metaltech-mysql-data:

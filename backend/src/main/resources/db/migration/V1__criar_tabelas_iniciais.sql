@@ -1,31 +1,32 @@
 -- Tabela de leituras de sensores
 CREATE TABLE leituras_sensores (
-    id BIGSERIAL PRIMARY KEY,
-    timestamp_leitura TIMESTAMP WITH TIME ZONE NOT NULL,
-    distancia_cm DOUBLE PRECISION NOT NULL,
-    indutivo_detectou_metal BOOLEAN NOT NULL,
-    indutivo_intensidade DOUBLE PRECISION,
-    capacitivo_detectou_nao_metal BOOLEAN NOT NULL,
-    capacitivo_intensidade DOUBLE PRECISION,
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    timestamp_leitura TIMESTAMP(6) NOT NULL,
+    distancia_cm DOUBLE NOT NULL,
+    indutivo_detectou_metal TINYINT(1) NOT NULL,
+    indutivo_intensidade DOUBLE NULL,
+    capacitivo_detectou_nao_metal TINYINT(1) NOT NULL,
+    capacitivo_intensidade DOUBLE NULL,
     tipo_peca VARCHAR(20) NOT NULL,
-    nivel_reservatorio_percentual DOUBLE PRECISION NOT NULL,
+    nivel_reservatorio_percentual DOUBLE NOT NULL,
     status_reservatorio VARCHAR(20) NOT NULL,
     dispositivo_id VARCHAR(50) NOT NULL,
-    versao_firmware VARCHAR(20),
-    criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+    versao_firmware VARCHAR(20) NULL,
+    criado_em TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    atualizado_em TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
+) ENGINE=InnoDB;
 
 -- Tabela de alertas
 CREATE TABLE alertas_nivel (
-    id BIGSERIAL PRIMARY KEY,
-    leitura_id BIGINT NOT NULL REFERENCES leituras_sensores(id) ON DELETE CASCADE,
-    timestamp_alertado TIMESTAMP WITH TIME ZONE NOT NULL,
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    leitura_id BIGINT NOT NULL,
+    timestamp_alertado TIMESTAMP(6) NOT NULL,
     tipo_alerta VARCHAR(20) NOT NULL,
     mensagem TEXT NOT NULL,
-    resolvido BOOLEAN NOT NULL DEFAULT FALSE,
-    criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+    resolvido TINYINT(1) NOT NULL DEFAULT 0,
+    criado_em TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_alertas_leitura FOREIGN KEY (leitura_id) REFERENCES leituras_sensores(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
 -- Índices para performance
 CREATE INDEX idx_leituras_timestamp ON leituras_sensores(timestamp_leitura);
@@ -35,7 +36,3 @@ CREATE INDEX idx_leituras_dispositivo ON leituras_sensores(dispositivo_id);
 CREATE INDEX idx_alertas_leitura ON alertas_nivel(leitura_id);
 CREATE INDEX idx_alertas_tipo ON alertas_nivel(tipo_alerta);
 CREATE INDEX idx_alertas_resolvido ON alertas_nivel(resolvido);
-
--- Comentários para documentação
-COMMENT ON TABLE leituras_sensores IS 'Armazena as leituras dos sensores da esteira de triagem';
-COMMENT ON TABLE alertas_nivel IS 'Armazena os alertas gerados automaticamente';

@@ -1,64 +1,31 @@
-# Documenta√ß√£o Markdown (somente README e docs/ s√£o versionados)
-*.md
-!README.md
-!docs/*.md
-
-# Java / Spring Boot / Maven
-target/
-!.mvn/wrapper/maven-wrapper.jar
-log/
-logs/
-*.class
-*.jar
-*.war
-*.nar
-*.ear
-*.zip
-*.tar.gz
-*.rar
-
-# Python / Ci√™ncia de Dados
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-.ipynb_checkpoints/
-venv/
-.venv/
-
-# Resultados gerados a partir do banco local (variam com o estado da base)
-dados/resultados/*_api.*
-
-# Ambiente e seguran√ßa
-.env
-.env.local
-*.pem
-secrets/
-
-# IDEs e sistema operacional
+# Java / Maven
+**/target/
+**/build/
+**/out/
+**/*.class
+**/*.jar
+**/*.log
+ECHO est† ativado.
+# Python
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.py[cod]
+ECHO est† ativado.
+# Artefatos locais gerados
+dados/graficos/
+dados/resultados/
+ECHO est† ativado.
+# IDE
 .idea/
 .vscode/
-*.iml
-*.iws
-.classpath
-.project
-.settings/
 .DS_Store
 Thumbs.db
+ECHO est† ativado.
+# Documentos locais
+plano_acao_tecnico.md
+projeto_interdisciplinar.md
+ECHO est† ativado.
+# Git
+!README.md
+!docs/*.md

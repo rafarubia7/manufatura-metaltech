@@ -3,9 +3,8 @@ package com.metaltech.monitoramento.domain.model;
 import java.time.Instant;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -37,7 +36,7 @@ public class AlertaNivel {
     @Column(name = "timestamp_alertado", nullable = false, updatable = false)
     private Instant dataHoraAlerta;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = TipoAlertaConverter.class)
     @Column(name = "tipo_alerta", nullable = false)
     private TipoAlerta tipoAlerta;
 

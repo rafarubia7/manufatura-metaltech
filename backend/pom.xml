@@ -17,7 +17,7 @@
         <spring-boot.version>3.2.0</spring-boot.version>
         <springdoc.version>2.5.0</springdoc.version>
         <flyway.version>10.10.0</flyway.version>
-        <postgresql.version>42.6.0</postgresql.version>
+        <mysql.version>8.0.33</mysql.version>
         <h2.version>2.2.224</h2.version>
         <lombok.version>1.18.36</lombok.version>
         <validation.version>3.1.0</validation.version>
@@ -48,9 +48,9 @@
         </dependency>
 
         <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <version>${postgresql.version}</version>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>${mysql.version}</version>
             <scope>runtime</scope>
         </dependency>
 
@@ -66,10 +66,9 @@
             <artifactId>flyway-core</artifactId>
             <version>${flyway.version}</version>
         </dependency>
-        <!-- Desde o Flyway 10 o suporte ao PostgreSQL fica em módulo separado. -->
         <dependency>
             <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-database-postgresql</artifactId>
+            <artifactId>flyway-mysql</artifactId>
             <version>${flyway.version}</version>
         </dependency>
 

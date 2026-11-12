@@ -6,9 +6,8 @@ import java.util.List;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -47,14 +46,14 @@ public class LeituraSensores {
     @Column(name = "capacitivo_intensidade")
     private Double capacitivoIntensidade;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = TipoPecaConverter.class)
     @Column(name = "tipo_peca", nullable = false)
     private TipoPeca tipoPeca;
 
     @Column(name = "nivel_reservatorio_percentual", nullable = false)
     private Double nivelReservatorioPercentual;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = StatusReservatorioConverter.class)
     @Column(name = "status_reservatorio", nullable = false)
     private StatusReservatorio statusReservatorio;
 

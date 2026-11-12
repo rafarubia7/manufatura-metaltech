@@ -5,24 +5,20 @@ spring:
   application:
     name: metaltech-monitoramento
   datasource:
-    # Sobrescrito por variáveis de ambiente no Docker.
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/metaltech}
+    url: ${DB_URL:jdbc:mysql://localhost:3307/metaltech?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
     username: ${DB_USERNAME:metaltech}
     password: ${DB_PASSWORD:metaltech123}
-    driver-class-name: org.postgresql.Driver
+    driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10
       connection-timeout: 30000
   jpa:
-    # Necessário: o mapper lê a coleção lazy de alertas fora do service.
     open-in-view: true
     hibernate:
       ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        # Evita N+1 ao carregar alertas na listagem.
         default_batch_fetch_size: 100
         jdbc:
           time_zone: UTC

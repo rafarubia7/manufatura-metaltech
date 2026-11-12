@@ -7,7 +7,7 @@ Passo a passo para subir o back-end, gerar e analisar os dados e validar a integ
 | Ferramenta | Versão | Uso |
 |---|---|---|
 | Java (JDK) | 17 | Back-end. Confira se `JAVA_HOME` aponta para o JDK 17 |
-| Docker Desktop | qualquer recente | PostgreSQL 15 (e opcionalmente o back-end) |
+| Docker Desktop | qualquer recente | MySQL 8.0 (e opcionalmente o back-end) |
 | Python | 3.11+ | Ciência de Dados |
 
 Maven não precisa ser instalado: o projeto usa o wrapper (`mvnw`).
@@ -33,11 +33,19 @@ Esperado: **36 testes, 0 falhas**. Os testes usam H2 em memória:
 Na raiz do repositório:
 
 ```powershell
-docker compose up -d postgres
+docker compose up -d mysql
 docker compose ps        # aguarde o status "healthy"
 ```
 
-Credenciais: banco `metaltech`, usuário `metaltech`, senha `metaltech123`, porta `5432`.
+Credenciais do MySQL:
+
+- Banco: `metaltech`
+- Usuário da aplicação: `metaltech`
+- Senha da aplicação: `metaltech123`
+- Porta host: `3307` (container interno: `3306`)
+- Acesso local/Workbench (usuário administrativo): `root` / `root123456`
+
+Observação: no `docker-compose.yml`, a conta do MySQL foi configurada com usuário non-root para a aplicação e com senha definida para a base local. O acesso administrativo do Workbench usa o usuário `root` com a senha `root123456`.
 
 ### Passo 3 — Back-end
 
@@ -47,6 +55,19 @@ Opção A, local (recomendada para desenvolvimento):
 cd backend
 .\mvnw.cmd spring-boot:run
 ```
+
+Se a porta `8080` estiver ocupada, o Spring falhará com `Web server failed to start. Port 8080 was already in use`. Nesse caso:
+
+```powershell
+cd backend
+$env:SERVER_PORT = "8081"
+.\mvnw.cmd spring-boot:run
+```
+
+ou pare o processo que já está usando a porta 8080 e rode novamente.
+
+Swagger em desenvolvimento (porta padrão): http://localhost:8080/swagger-ui.html
+Swagger com porta alternativa: http://localhost:8081/swagger-ui.html
 
 Opção B, tudo em contêiner:
 
@@ -105,14 +126,14 @@ Para analisar os dados que já estão no banco:
 ### Reiniciar do zero
 
 ```powershell
-docker compose down -v          # apaga o volume do PostgreSQL
-docker compose up -d postgres
+docker compose down -v          # apaga o volume do MySQL
+docker compose up -d mysql
 ```
 
 ## 3. Teste manual rápido
 
 ```powershell
-curl -X POST http://localhost:8080/api/v1/leituras -H "Content-Type: application/json" -d '{\"timestamp\":\"2026-11-03T10:00:00Z\",\"sensorDistancia\":{\"valor\":9.5,\"unidade\":\"cm\",\"status\":\"OK\"},\"sensorIndutivo\":{\"detectouMetal\":true,\"intensidade\":0.85,\"status\":\"OK\"},\"sensorCapacitivo\":{\"detectouNaoMetal\":false,\"intensidade\":0.1,\"status\":\"OK\"},\"peca\":{\"id\":\"peca-1\",\"tipo\":\"METALICA\",\"timestampDetectado\":\"2026-11-03T10:00:00Z\"},\"nivelReservatorio\":{\"nivelAtual\":97,\"capacidadeMaxima\":100,\"percentual\":97,\"status\":\"NORMAL\"},\"dispositivoId\":\"ESP32-001\",\"versaoFirmware\":\"1.0.0\"}'
+curl -X POST http://localhost:8080/api/v1/leituras -H "Content-Type: application/json" -d '{"timestamp":"2026-11-03T10:00:00Z","sensorDistancia":{"valor":9.5,"unidade":"cm","status":"OK"},"sensorIndutivo":{"detectouMetal":true,"intensidade":0.85,"status":"OK"},"sensorCapacitivo":{"detectouNaoMetal":false,"intensidade":0.1,"status":"OK"},"peca":{"id":"peca-1","tipo":"METALICA","timestampDetectado":"2026-11-03T10:00:00Z"},"nivelReservatorio":{"nivelAtual":97,"capacidadeMaxima":100,"percentual":97,"status":"NORMAL"},"dispositivoId":"ESP32-001","versaoFirmware":"1.0.0"}'
 curl http://localhost:8080/api/v1/leituras/alertas
 curl http://localhost:8080/api/v1/leituras/estatisticas
 ```
@@ -126,9 +147,11 @@ Resultado esperado:
 
 | Sintoma | Causa provável | Solução |
 |---|---|---|
-| `Connection to localhost:5432 refused` | PostgreSQL não está rodando | `docker compose up -d postgres` |
+| `Connection to localhost:3306 refused` | MySQL não está rodando | `docker compose up -d mysql` |
 | `failed to connect to the docker API` | Docker Desktop fechado | Abra o Docker Desktop e aguarde ficar pronto |
-| `Unsupported Database: PostgreSQL` | Falta o módulo do Flyway | Já corrigido no `pom.xml` (`flyway-database-postgresql`) |
+| `Unsupported Database: MySQL` | Falta o módulo do Flyway | Já corrigido no `pom.xml` (`flyway-mysql`) |
+| `Communications link failure` | MySQL em pé, mas sem acesso/credenciais | Verifique `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` |
+| `Access denied for user 'root'@'localhost'` | Usuário ou senha do Workbench errados | Use `root / root123456` para conexão local do Workbench |
 | Erro de compilação do Lombok | JDK ≠ 17 | Aponte `JAVA_HOME` para o JDK 17 |
 | Validação acusa total diferente | Banco tinha leituras anteriores | Reinicie do zero (seção acima) |
 | Acentos quebrados no console | Codificação do terminal | Os scripts já forçam UTF-8; use o Windows Terminal |
@@ -139,7 +162,7 @@ Resultado esperado:
 
 **Back-end**
 
-- API REST validada contra PostgreSQL real:
+- API REST validada contra MySQL real:
   - status do reservatório calculado no domínio;
   - alertas persistidos em cascata, deduplicados e resolvidos automaticamente;
   - estatísticas ampliadas;
