@@ -16,6 +16,21 @@ O reconhecimento usa o MindAR, que compara a câmera com **fotos da esteira** co
 
 > ⚠ **Atenção:** por enquanto o app usa **DADOS DE TESTE (SIMULADOS)**. Os números são inventados e mudam a cada 3 segundos.
 
+## Como apontar a câmera para a esteira
+
+Para os painéis aparecerem, a câmera do celular deve estar posicionada no mesmo ângulo da foto usada como referência. Use a imagem abaixo como guia de posição, altura e enquadramento.
+
+![Guia do ângulo para apontar a câmera para a esteira](docs/guia-angulo-esteira.png)
+
+> 📷 **Espaço reservado:** substitua o arquivo `docs/guia-angulo-esteira.png` pela foto real do ângulo correto (a mesma posição de onde a foto da esteira foi tirada). Enquanto não houver a imagem, esse espaço permanece como referência.
+
+Dicas de posicionamento:
+
+- Fique na mesma posição de onde a foto de referência foi tirada.
+- Mantenha o celular na altura indicada na imagem-guia.
+- Enquadre toda a esteira, como na imagem.
+- Evite reflexos e luz forte direta sobre a esteira.
+
 ## Tecnologias
 
 - HTML5, CSS3 e JavaScript puro (sem build, sem npm, sem framework)
@@ -33,6 +48,8 @@ ra-manotech/
 │   └── target.mind   # foto(s) da esteira compiladas para o MindAR
 ├── css/
 │   └── style.css     # estilos dos painéis, selo e barra de nível
+├── docs/
+│   └── guia-angulo-esteira.png  # imagem-guia do ângulo da câmera (a adicionar)
 └── js/
     ├── config.js     # INTERVALO_MS, TOLERANCIA_PERDA_MS e demais configurações
     ├── dados.js      # obterDados(): simulado ou fetch na API
