@@ -1,5 +1,7 @@
 // src/services/api.js
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8081';
+// Sem VITE_API_URL, usa o mesmo host em que a página foi aberta (localhost ou o IP do PC do back-end),
+// na porta 8080. Assim não é preciso trocar o IP quando ele muda.
+const API_URL = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:8080`;
 const BASE_URL = `${API_URL}/api/v1`;
 
 const extrairLista = (payload) => {
