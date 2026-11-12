@@ -21,7 +21,9 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestControllerAdvice
 public class TratadorGlobalExcecoes extends ResponseEntityExceptionHandler {
 
@@ -45,7 +47,10 @@ public class TratadorGlobalExcecoes extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<RespostaErro> tratarErroInesperado(Exception ex, WebRequest requisicao) {
-        return responder(HttpStatus.INTERNAL_SERVER_ERROR, "ERRO_INTERNO", ex.getMessage(), requisicao, List.of());
+        // O detalhe fica no log do servidor; o cliente recebe uma mensagem genérica.
+        log.error("Erro inesperado em {}", requisicao.getDescription(false), ex);
+        return responder(HttpStatus.INTERNAL_SERVER_ERROR, "ERRO_INTERNO",
+                "Erro interno do servidor. Tente novamente ou contate o suporte.", requisicao, List.of());
     }
 
     @Override
