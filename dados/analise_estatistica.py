@@ -51,8 +51,27 @@ NOME_STATUS = {"ALERTA_BAIXO": "Alerta baixo (<20%)", "NORMAL": "Normal (20-80%)
                "ALERTA_ALTO": "Alerta alto (>80%)", "CRITICO": "Crítico (≥95%)"}
 
 
+def normalizar_colunas_numericas(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    colunas_numericas = [
+        "distancia_cm",
+        "indutivo_intensidade",
+        "capacitivo_intensidade",
+        "nivel_reservatorio_percentual",
+    ]
+    for coluna in colunas_numericas:
+        if coluna in df.columns:
+            df[coluna] = pd.to_numeric(df[coluna], errors="coerce")
+
+    if "tipo_peca" in df.columns:
+        df["tipo_peca"] = df["tipo_peca"].replace({"": pd.NA, None: pd.NA}).fillna("DESCONHECIDA")
+    if "status_reservatorio" in df.columns:
+        df["status_reservatorio"] = df["status_reservatorio"].replace({"": pd.NA, None: pd.NA}).fillna("NORMAL")
+    return df
+
+
 def carregar_csv(caminho: Path) -> pd.DataFrame:
-    return pd.read_csv(caminho)
+    return normalizar_colunas_numericas(pd.read_csv(caminho))
 
 
 def carregar_api(url: str) -> pd.DataFrame:
@@ -80,7 +99,7 @@ def carregar_api(url: str) -> pd.DataFrame:
         if corpo["ultima"]:
             break
         pagina += 1
-    return pd.DataFrame(linhas)
+    return normalizar_colunas_numericas(pd.DataFrame(linhas))
 
 
 def turno_por_hora(hora) -> np.ndarray:
@@ -159,8 +178,8 @@ def ciclos_esvaziamento(df: pd.DataFrame, queda_minima: float = 25.0, retomada: 
         "tempo_mediano_enchimento_min": round(float(np.median(enchimentos)), 1) if enchimentos else None,
         "nivel_medio_no_inicio_do_esvaziamento": round(float(np.mean(picos)), 2) if picos else None,
         "nivel_medio_ao_fim_do_esvaziamento": round(float(np.mean(vales)), 2) if vales else None,
-        "esvaziamentos_iniciados_acima_de_95pct": int(sum(p >= LIMITE_CRITICO for p in picos)),
-        "esvaziamentos_iniciados_abaixo_de_80pct": int(sum(p <= LIMITE_ALTO for p in picos)),
+        "esvaziamentos_iniciados_acima_de_95pct": int(sum(1 for p in picos if p >= LIMITE_CRITICO)),
+        "esvaziamentos_iniciados_abaixo_de_80pct": int(sum(1 for p in picos if p <= LIMITE_ALTO)),
     }
 
 
