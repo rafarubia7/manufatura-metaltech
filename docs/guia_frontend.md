@@ -391,3 +391,23 @@ O front-end deve ser desenvolvido usando o contrato da API como fonte da verdade
 
 Se o front-end for em outro PC, ele nunca deve apontar para `localhost`.
 Ele deve apontar para o IP do PC que está rodando o back-end.
+
+## Estado atual da esteira
+
+`GET /api/v1/esteira/status` devolve tudo que o painel principal e a RA precisam, em uma chamada:
+
+```json
+{
+  "ultimaLeitura": "2026-11-08T23:58:41Z",
+  "dispositivoId": "ESP32-001",
+  "nivelReservatorioPercentual": 82.5,
+  "statusReservatorio": "ALERTA_ALTO",
+  "totalMetalicas": 6000,
+  "totalNaoMetalicas": 3303,
+  "totalDesconhecidas": 613,
+  "totalAmbas": 50,
+  "alertasAtivos": 2
+}
+```
+
+Responde `404` (`NAO_ENCONTRADO`) enquanto não existir nenhuma leitura. Use polling a cada poucos segundos.

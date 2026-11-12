@@ -141,6 +141,7 @@ python -m venv .venv
 | GET | `/api/v1/leituras/alertas` | Lista alertas pendentes |
 | PUT | `/api/v1/leituras/alertas/{id}/resolver` | Resolve um alerta |
 | GET | `/api/v1/leituras/estatisticas` | Retorna indicadores operacionais |
+| GET | `/api/v1/esteira/status` | Estado atual da esteira (último nível, contagens e alertas ativos) |
 
 Documentação interativa:
 - http://localhost:8080/swagger-ui.html

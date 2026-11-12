@@ -2,6 +2,7 @@ package com.metaltech.monitoramento.infrastructure.repository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +15,10 @@ import com.metaltech.monitoramento.domain.model.StatusReservatorio;
 import com.metaltech.monitoramento.domain.model.TipoPeca;
 
 public interface LeituraSensoresRepository extends JpaRepository<LeituraSensores, Long> {
+
+    Optional<LeituraSensores> findFirstByOrderByDataHoraDescIdDesc();
+
+    long countByTipoPeca(TipoPeca tipo);
 
     @Query("SELECT l FROM LeituraSensores l ORDER BY l.dataHora")
     List<LeituraSensores> listarEmOrdemCronologica();
