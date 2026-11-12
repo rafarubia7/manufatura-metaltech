@@ -152,7 +152,7 @@ def principal() -> None:
         sys.exit(f"API indisponível em {argumentos.url}: {erro}\nSuba o backend antes (docs/guia_execucao.md).")
     if existentes:
         print(f"ATENÇÃO: o banco já tem {existentes} leituras; a validação compara o total e vai acusar diferença.\n"
-              "Para recomeçar do zero: docker compose down -v && docker compose up -d postgres")
+              "Para recomeçar do zero: docker compose down -v && docker compose up -d mysql")
 
     print(f"Enviando {len(df)} leituras para {argumentos.url} ...")
     envio = enviar(sessao, argumentos.url, df, argumentos.atraso)

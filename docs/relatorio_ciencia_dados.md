@@ -7,7 +7,7 @@ Frente: Ciência de Dados (CIDA) · Versão 1.0 · Novembro de 2026
 
 ## Resumo
 
-Este relatório apresenta a análise estatística de uma semana simulada de operação da esteira de triagem MetalTech (9.965 leituras de sensores entre 02/11/2026 e 08/11/2026). Os dados foram gerados por uma simulação orientada a eventos, que reproduz turnos de produção, lotes, a física dos sensores e o ciclo de enchimento e esvaziamento do reservatório, além de cinco tipos de anomalia com rótulo conhecido. A análise calcula estatísticas descritivas, identifica padrões por turno e por ciclo, aplica quatro famílias de detectores de outliers (avaliados contra a verdade-terreno da simulação) e relaciona os achados com os alertas gerados pelo back-end. O dataset completo foi enviado à API REST real (PostgreSQL) por requisições POST, e os indicadores calculados pela API coincidiram com os do pandas em 22 de 22 verificações.
+Este relatório apresenta a análise estatística de uma semana simulada de operação da esteira de triagem MetalTech (9.965 leituras de sensores entre 02/11/2026 e 08/11/2026). Os dados foram gerados por uma simulação orientada a eventos, que reproduz turnos de produção, lotes, a física dos sensores e o ciclo de enchimento e esvaziamento do reservatório, além de cinco tipos de anomalia com rótulo conhecido. A análise calcula estatísticas descritivas, identifica padrões por turno e por ciclo, aplica quatro famílias de detectores de outliers (avaliados contra a verdade-terreno da simulação) e relaciona os achados com os alertas gerados pelo back-end. O dataset completo foi enviado à API REST real (MySQL 8.0) por requisições POST, e os indicadores calculados pela API coincidiram com os do pandas em 22 de 22 verificações.
 
 Principais conclusões:
 
@@ -240,7 +240,7 @@ Interpretação:
 
 ## 8. Validação da integração com a API REST
 
-O script `dados/enviar_para_api.py` enviou as 9.965 leituras por `POST /api/v1/leituras`, no contrato JSON do plano técnico, para o back-end conectado ao PostgreSQL 15 (Docker).
+O script `dados/enviar_para_api.py` enviou as 9.965 leituras por `POST /api/v1/leituras`, no contrato JSON do plano técnico, para o back-end conectado ao MySQL 8.0 (Docker).
 
 | Item | Resultado |
 |---|---|
