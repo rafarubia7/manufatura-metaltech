@@ -85,6 +85,6 @@ O MindAR reconhece **imagens**, não objetos 3D. Ele funciona na esteira real co
 
 Ajustes finos (no `index.html` e no `js/config.js`):
 
-- `warmupTolerance` (atributo `mindar-image` da cena): quanto menor, mais rápido reconhece.
-- `missTolerance` (atributo `mindar-image` da cena): quanto maior, menos "perde" a esteira quando o celular treme.
-- `TOLERANCIA_PERDA_MS` (`js/config.js`): por quanto tempo os painéis ficam na tela depois de perder a esteira.
+* `warmupTolerance` (atributo `mindar-image` da cena): quanto menor, mais rápido reconhece.
+* `missTolerance` (atributo `mindar-image` da cena): quanto maior, menos "perde" a esteira quando o celular treme.
+* `TOLERANCIA_PERDA_MS` (`js/config.js`): por quanto tempo os painéis ficam na tela depois de perder a esteira.
