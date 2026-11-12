@@ -38,6 +38,8 @@ Documentação interativa: `/swagger-ui.html`.
 }
 ```
 
+Autenticação: quando o back-end tiver `API_KEY` configurada, este `POST` exige o cabeçalho `X-API-Key: <chave>`; sem ele, ou com chave errada, a resposta é `401` (`NAO_AUTORIZADO`). As consultas (`GET`) não exigem chave.
+
 Resposta `201` com a leitura persistida (campo `id`) e a lista `alertas` gerados.
 
 ## 3. Endpoints

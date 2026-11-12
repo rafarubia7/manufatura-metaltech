@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from collections import Counter
@@ -148,6 +149,9 @@ def principal() -> None:
         df = df.head(argumentos.limite)
 
     sessao = requests.Session()
+    chave = os.environ.get("METALTECH_API_KEY")
+    if chave:
+        sessao.headers["X-API-Key"] = chave
     try:
         existentes = total_na_api(sessao, argumentos.url, timeout=10)
     except requests.RequestException as erro:

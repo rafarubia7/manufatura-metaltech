@@ -22,7 +22,7 @@ import com.metaltech.monitoramento.infrastructure.repository.AlertaNivelReposito
 import com.metaltech.monitoramento.infrastructure.repository.LeituraSensoresRepository;
 
 // Prova que Flyway + entidades + converters funcionam no MySQL real. Pula se o Docker não estiver ativo.
-@SpringBootTest
+@SpringBootTest(properties = "app.seguranca.api-key=")
 @AutoConfigureMockMvc
 @Testcontainers(disabledWithoutDocker = true)
 class LeituraSensoresMySqlIntegracaoTest {

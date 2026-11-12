@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import time
 from datetime import datetime, timezone
@@ -188,8 +189,13 @@ def consultar_iolink(url: str, timeout: int = 20) -> dict[str, Any]:
         raise ValueError(f"Resposta do IO-Link não é JSON válida: {resposta.text[:500]}") from erro
 
 
+def cabecalhos_api() -> dict[str, str]:
+    chave = os.environ.get("METALTECH_API_KEY")
+    return {"X-API-Key": chave} if chave else {}
+
+
 def postar_api(url: str, payload: dict[str, Any], timeout: int = 30) -> requests.Response:
-    resposta = requests.post(url, json=payload, timeout=timeout)
+    resposta = requests.post(url, json=payload, headers=cabecalhos_api(), timeout=timeout)
     if resposta.status_code not in {200, 201}:
         raise RuntimeError(f"Falha ao enviar para a API: HTTP {resposta.status_code} | {resposta.text[:500]}")
     return resposta

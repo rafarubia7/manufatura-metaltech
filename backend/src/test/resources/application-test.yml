@@ -29,3 +29,7 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+
+app:
+  seguranca:
+    api-key: ""

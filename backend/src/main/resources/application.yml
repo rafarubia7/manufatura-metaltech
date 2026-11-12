@@ -57,3 +57,5 @@ springdoc:
 app:
   cors:
     origens-permitidas: "${CORS_ORIGENS:*}"
+  seguranca:
+    api-key: "${API_KEY:}"
