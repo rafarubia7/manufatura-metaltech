@@ -183,12 +183,22 @@ def ciclos_esvaziamento(df: pd.DataFrame, queda_minima: float = 25.0, retomada: 
     }
 
 
+LIMITE_ENCHIMENTO_PCT_MIN = 5.0   # mesmo limite do back-end (R1 da CIDA)
+JANELA_TAXA_S = 180.0             # janela anterior de 3 min
+JANELA_MINIMA_S = 60.0            # exige ao menos 1 min entre a leitura-base e a atual
+
+
 def simular_alertas(df: pd.DataFrame) -> dict:
-    """Mesma regra do backend: um alerta de reservatório ativo por tipo; cada AMBAS gera alerta."""
+    """Mesma regra do backend: um alerta de reservatório ativo por tipo; cada AMBAS gera alerta;
+    ENCHIMENTO_RAPIDO abre um alerta por episódio (taxa > 5 %/min na janela anterior de 3 min)."""
     mapa = {"ALERTA_BAIXO": "RESERVATORIO_BAIXO", "ALERTA_ALTO": "RESERVATORIO_ALTO", "CRITICO": "RESERVATORIO_CRITICO"}
-    contagem = {"RESERVATORIO_BAIXO": 0, "RESERVATORIO_ALTO": 0, "RESERVATORIO_CRITICO": 0, "CONTAGEM_ANOMALA": 0}
+    contagem = {"RESERVATORIO_BAIXO": 0, "RESERVATORIO_ALTO": 0, "RESERVATORIO_CRITICO": 0,
+                "CONTAGEM_ANOMALA": 0, "ENCHIMENTO_RAPIDO": 0}
     ativo, aberto_em, duracoes = None, None, {tipo: [] for tipo in mapa.values()}
-    for instante, status, tipo_peca in zip(df["timestamp"], df["status_reservatorio"], df["tipo_peca"]):
+    segundos = np.array([t.timestamp() for t in df["timestamp"]])
+    niveis = df["nivel_reservatorio_percentual"].to_numpy(dtype=float)
+    enchendo = False
+    for i, (instante, status, tipo_peca) in enumerate(zip(df["timestamp"], df["status_reservatorio"], df["tipo_peca"])):
         atual = mapa.get(status)
         if ativo and ativo != atual:
             duracoes[ativo].append((instante - aberto_em).total_seconds() / 60)
@@ -198,10 +208,23 @@ def simular_alertas(df: pd.DataFrame) -> dict:
             contagem[atual] += 1
         if tipo_peca == "AMBAS":
             contagem["CONTAGEM_ANOMALA"] += 1
+        # Primeira leitura em [t-3min, t): estritamente anterior, como a consulta do back-end.
+        primeiro = np.searchsorted(segundos, segundos[i] - JANELA_TAXA_S, side="left")
+        limite = np.searchsorted(segundos, segundos[i], side="left")
+        taxa = None
+        if primeiro < limite and segundos[i] - segundos[primeiro] >= JANELA_MINIMA_S:
+            taxa = (niveis[i] - niveis[primeiro]) / ((segundos[i] - segundos[primeiro]) / 60.0)
+        if taxa is not None and taxa > LIMITE_ENCHIMENTO_PCT_MIN:
+            if not enchendo:
+                contagem["ENCHIMENTO_RAPIDO"] += 1
+            enchendo = True
+        else:
+            enchendo = False
     dias = (df["timestamp"].iloc[-1] - df["timestamp"].iloc[0]).total_seconds() / 86400
     return {
         "alertas_por_tipo": contagem,
         "alertas_ativos_ao_final": 1 if ativo else 0,
+        "enchimento_ativo_ao_final": 1 if enchendo else 0,
         "tipo_ativo_ao_final": ativo,
         "duracao_media_alerta_min": {tipo: (round(float(np.mean(v)), 1) if v else None) for tipo, v in duracoes.items()},
         "alertas_por_dia": round(sum(contagem.values()) / max(dias, 1), 1),

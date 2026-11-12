@@ -127,7 +127,9 @@ def validar(sessao: requests.Session, url: str, df: pd.DataFrame) -> list[dict]:
                                   estatisticas["distribuicaoStatusReservatorio"][s]["quantidade"]))
     for tipo, quantidade in alertas_local["alertas_por_tipo"].items():
         checagens.append(comparar(f"alertas gerados {tipo}", quantidade, estatisticas["alertasPorTipo"][tipo]))
-    ativos_esperados = alertas_local["alertas_ativos_ao_final"] + alertas_local["alertas_por_tipo"]["CONTAGEM_ANOMALA"]
+    ativos_esperados = (alertas_local["alertas_ativos_ao_final"]
+                        + alertas_local["alertas_por_tipo"]["CONTAGEM_ANOMALA"]
+                        + alertas_local["enchimento_ativo_ao_final"])
     checagens.append(comparar("alertas ativos (GET /alertas)", ativos_esperados, len(alertas_api)))
     return checagens
 
