@@ -37,15 +37,15 @@ docker compose up -d mysql
 docker compose ps        # aguarde o status "healthy"
 ```
 
-Credenciais do MySQL:
+Credenciais do MySQL (definidas no arquivo `.env`, copiado de `.env.example`):
 
 - Banco: `metaltech`
-- Usuário da aplicação: `metaltech`
-- Senha da aplicação: `metaltech123`
+- Usuário da aplicação: valor de `MYSQL_USER`
+- Senha da aplicação: valor de `MYSQL_PASSWORD`
 - Porta host: `3307` (container interno: `3306`)
-- Acesso local/Workbench (usuário administrativo): `root` / `root123`
+- Acesso administrativo (Workbench): usuário `root` e a senha de `MYSQL_ROOT_PASSWORD`
 
-Observação: no `docker-compose.yml`, a conta do MySQL foi configurada com usuário non-root para a aplicação e com senha definida para a base local. O acesso administrativo do Workbench usa o usuário `root` com a senha `root123`.
+O `.env` não é versionado. As senhas só valem na criação do volume: para trocá-las depois, rode `docker compose down -v` (apaga os dados) e suba de novo.
 
 ### Passo 3 — Back-end
 
@@ -151,7 +151,7 @@ Resultado esperado:
 | `failed to connect to the docker API` | Docker Desktop fechado | Abra o Docker Desktop e aguarde ficar pronto |
 | `Unsupported Database: MySQL` | Falta o módulo do Flyway | Já corrigido no `pom.xml` (`flyway-mysql`) |
 | `Communications link failure` | MySQL em pé, mas sem acesso/credenciais | Verifique `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` |
-| `Access denied for user 'root'@'localhost'` | Usuário ou senha do Workbench errados | Use `root / root123` para conexão local do Workbench |
+| `Access denied for user 'root'@'localhost'` | Usuário ou senha do Workbench errados | Use `root` e a senha de `MYSQL_ROOT_PASSWORD` (arquivo `.env`) |
 | Erro de compilação do Lombok | JDK ≠ 17 | Aponte `JAVA_HOME` para o JDK 17 |
 | Validação acusa total diferente | Banco tinha leituras anteriores | Reinicie do zero (seção acima) |
 | Acentos quebrados no console | Codificação do terminal | Os scripts já forçam UTF-8; use o Windows Terminal |

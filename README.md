@@ -89,6 +89,14 @@ Ainda pendente:
 
 ## Execução rápida
 
+### 0. Credenciais
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Edite o `.env` e defina as senhas. O `.env` não vai para o Git.
+
 ### 1. Banco de dados
 
 ```powershell
