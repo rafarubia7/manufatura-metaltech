@@ -196,6 +196,7 @@ A análise técnica e os relatórios encontram-se em:
 
 ## Observações importantes
 
+- Cobertura de testes medida com JaCoCo (`cd backend; .\mvnw.cmd verify`, relatório em `backend/target/site/jacoco/index.html`): **90% das linhas**; o build falha abaixo de 70%. O teste de integração com MySQL usa Testcontainers e precisa do Docker ativo.
 - O projeto usa MySQL por padrão na versão atual; PostgreSQL deixou de ser a referência principal da execução local.
 - O Docker é usado para o banco e não para o front-end.
 - Para outros PCs da rede, o front-end deve usar o IP do PC que roda o backend, e não `localhost`.
