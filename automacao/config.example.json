@@ -1,0 +1,45 @@
+{
+    "mestre_url": "http://10.110.12.41",
+    "portas": {
+        "distancia": 1,
+        "capacitivo": 2,
+        "indutivo": 3
+    },
+    "sensores": {
+        "capacitivo": {
+            "liga_acima": 1500,
+            "desliga_abaixo": 1000
+        },
+        "indutivo": {
+            "liga_abaixo": 20000,
+            "desliga_acima": 25000
+        }
+    },
+    "distancia": {
+        "vazio_raw": 80,
+        "cheio_raw": 5,
+        "cm_por_unidade": 0.1,
+        "cm_offset": 0.0,
+        "amostras_mediana": 5
+    },
+    "nivel": {
+        "limite_atencao": 70,
+        "limite_critico": 90,
+        "limite_baixo": null,
+        "nomes": {
+            "normal": "NORMAL",
+            "atencao": "ALERTA_ALTO",
+            "critico": "CRITICO",
+            "baixo": "ALERTA_BAIXO"
+        }
+    },
+    "classificacao": {
+        "janela_s": 0.5
+    },
+    "intervalo_leitura_s": 0.1,
+    "heartbeat_s": 0,
+    "api_url": "http://localhost:8080/api/v1/leituras",
+    "api_token": null,
+    "dispositivo_id": "gateway-lab-01",
+    "versao_firmware": "gateway-0.2"
+}
