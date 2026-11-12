@@ -14,7 +14,7 @@ Ciclos de esvaziamento: {'quantidade': 44, 'por_dia': 6.29, 'duracao_media_esvaz
 Outliers por detector: R1_enchimento_acima_5pct_min=97, R2_esvaziamento_acima_3pct_min=24, R3_sinal_nulo_nos_sensores=61, R4_conflito_ambas=50, Z_taxa_nivel_robusto=1528, IQR_vazao_alta=562
 Janelas de vazão (10 min): {'baixa': 34, 'alta': 25, 'total_janelas': 1008}
 
-Alertas que o backend deve gerar: {'RESERVATORIO_BAIXO': 46, 'RESERVATORIO_ALTO': 44, 'RESERVATORIO_CRITICO': 7, 'CONTAGEM_ANOMALA': 50}
+Alertas que o backend deve gerar: {'RESERVATORIO_BAIXO': 46, 'RESERVATORIO_ALTO': 44, 'RESERVATORIO_CRITICO': 7, 'CONTAGEM_ANOMALA': 50, 'ENCHIMENTO_RAPIDO': 15}
 
 Avaliação contra a verdade-terreno da simulação:
   R1_enchimento_acima_5pct_min: precisão 96.9% | episódios detectados 8/16

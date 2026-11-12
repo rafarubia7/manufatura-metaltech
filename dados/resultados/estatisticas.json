@@ -331,16 +331,18 @@
       "RESERVATORIO_BAIXO": 46,
       "RESERVATORIO_ALTO": 44,
       "RESERVATORIO_CRITICO": 7,
-      "CONTAGEM_ANOMALA": 50
+      "CONTAGEM_ANOMALA": 50,
+      "ENCHIMENTO_RAPIDO": 15
     },
     "alertas_ativos_ao_final": 0,
+    "enchimento_ativo_ao_final": 0,
     "tipo_ativo_ao_final": null,
     "duracao_media_alerta_min": {
       "RESERVATORIO_BAIXO": 31.6,
       "RESERVATORIO_ALTO": 19.4,
       "RESERVATORIO_CRITICO": 27.8
     },
-    "alertas_por_dia": 21.0
+    "alertas_por_dia": 23.2
   },
   "classificacao": {
     "acuracia_pct": 93.32,

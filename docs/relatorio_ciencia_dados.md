@@ -7,7 +7,7 @@ Frente: Ciência de Dados (CIDA) · Versão 1.0 · Novembro de 2026
 
 ## Resumo
 
-Este relatório apresenta a análise estatística de uma semana simulada de operação da esteira de triagem MetalTech (9.965 leituras de sensores entre 02/11/2026 e 08/11/2026). Os dados foram gerados por uma simulação orientada a eventos, que reproduz turnos de produção, lotes, a física dos sensores e o ciclo de enchimento e esvaziamento do reservatório, além de cinco tipos de anomalia com rótulo conhecido. A análise calcula estatísticas descritivas, identifica padrões por turno e por ciclo, aplica quatro famílias de detectores de outliers (avaliados contra a verdade-terreno da simulação) e relaciona os achados com os alertas gerados pelo back-end. O dataset completo foi enviado à API REST real (MySQL 8.0) por requisições POST, e os indicadores calculados pela API coincidiram com os do pandas em 22 de 22 verificações.
+Este relatório apresenta a análise estatística de uma semana simulada de operação da esteira de triagem MetalTech (9.965 leituras de sensores entre 02/11/2026 e 08/11/2026). Os dados foram gerados por uma simulação orientada a eventos, que reproduz turnos de produção, lotes, a física dos sensores e o ciclo de enchimento e esvaziamento do reservatório, além de cinco tipos de anomalia com rótulo conhecido. A análise calcula estatísticas descritivas, identifica padrões por turno e por ciclo, aplica quatro famílias de detectores de outliers (avaliados contra a verdade-terreno da simulação) e relaciona os achados com os alertas gerados pelo back-end. O dataset completo foi enviado à API REST real (MySQL 8.0) por requisições POST, e os indicadores calculados pela API coincidiram com os do pandas em 23 de 23 verificações.
 
 Principais conclusões:
 
@@ -15,7 +15,7 @@ Principais conclusões:
 - O turno T1, apesar de reagir mais rápido aos alertas, é o que mais tempo passa em nível crítico (**2,83%**, contra 1,48% em T2 e 1,49% em T3). A causa é a taxa de enchimento mais alta. Isso indica que o limiar fixo de 80% para acionar o esvaziamento é insuficiente nos horários de pico.
 - **6,15% das peças** saem como DESCONHECIDA, e 79% delas passaram a mais de 12 cm dos sensores. É um problema de alinhamento mecânico, não de sensor.
 - Os detectores por regra identificaram **100%** dos episódios de falha de conexão, deriva do capacitivo e esvaziamento brusco. O IQR da vazão de peças encontrou **15 de 17** gargalos.
-- A regra de alerta do back-end produz ~21 alertas por dia. Quase metade são de **reservatório baixo** ao fim de cada esvaziamento, que é um evento esperado e gera ruído para o operador.
+- A regra de alerta do back-end produz ~23 alertas por dia (incluindo o novo alerta de enchimento rápido, com 15 na semana). Quase metade são de **reservatório baixo** ao fim de cada esvaziamento, que é um evento esperado e gera ruído para o operador.
 
 ---
 
@@ -213,11 +213,21 @@ Durante os atolamentos o nível fica parado (platôs horizontais na série). Qua
 
 **Observação metodológica:** o plano técnico propunha "intensidade < 0,10" como sinal de falha de conexão. Aplicada a um sensor isolado, essa regra marcaria toda peça não metálica, porque o indutivo fica naturalmente perto de zero nesses casos. A regra adotada exige **os dois sensores** sem sinal ao mesmo tempo.
 
+### 6.3 Critério de alerta adotado
+
+O PDF pede "um critério simples de alerta". Dos detectores avaliados contra a verdade-terreno da simulação, foi adotada a **regra R1: taxa de enchimento acima de 5 %/min**, e não o z-score robusto (precisão de 11,4%) nem o IQR da vazão (precisão de 54,6%).
+
+- **Definição:** diferença entre o nível atual e o da primeira leitura dos 3 minutos anteriores, dividida pelo tempo decorrido (mínimo de 1 minuto entre as duas).
+- **Resultado no dataset de 7 dias:** 97 leituras acima do limite, agrupadas em **15 alertas** (um por episódio); nenhum ativo ao final.
+- **Por que 5 %/min:** com 8 %/min não há nenhum alerta; com 3 %/min seriam 14. O limite de 5 %/min fica logo acima do enchimento normal (cerca de 0,5 %/min por turno) e capta as rajadas que se formam depois de um gargalo.
+- **Implementação:** o mesmo critério roda no back-end (alerta `ENCHIMENTO_RAPIDO`) e é exibido no dashboard e na RA.
+- **Limitação:** a regra assume leituras em ordem cronológica e não detecta enchimento lento e contínuo; para isso vale o alerta por faixa de nível (80% e 95%).
+
 ---
 
 ## 7. Relação com os alertas do back-end
 
-O back-end mantém **um alerta ativo por tipo e dispositivo**, resolve automaticamente o alerta quando a condição muda e gera um alerta para **cada** conflito AMBAS. Aplicando a mesma regra ao dataset:
+O back-end mantém **um alerta ativo por tipo e dispositivo**, resolve automaticamente o alerta quando a condição muda, gera um alerta para **cada** conflito AMBAS e abre um alerta ENCHIMENTO_RAPIDO por episódio de enchimento acima de 5 %/min (seção 6.3). Aplicando a mesma regra ao dataset:
 
 | Tipo de alerta | Gerados na semana | Duração média ativa |
 |---|---|---|
@@ -225,7 +235,8 @@ O back-end mantém **um alerta ativo por tipo e dispositivo**, resolve automatic
 | RESERVATORIO_ALTO | 44 | 19,4 min |
 | RESERVATORIO_CRITICO | 7 | 27,8 min |
 | CONTAGEM_ANOMALA | 50 | — (resolução manual) |
-| **Total** | **147 (~21 por dia)** | |
+| ENCHIMENTO_RAPIDO | 15 | — (resolve sozinho quando a taxa normaliza) |
+| **Total** | **162 (~23 por dia)** | |
 
 Esses números foram confirmados pela API real (seção 8).
 
@@ -245,11 +256,11 @@ O script `dados/enviar_para_api.py` enviou as 9.965 leituras por `POST /api/v1/l
 | Item | Resultado |
 |---|---|
 | Requisições | 9.965, todas com **HTTP 201** |
-| Tempo total | 52,5 s (~190 leituras/s) |
+| Tempo total | 134,4 s (~74 leituras/s, com API key) |
 | Status recalculado pelo back-end diferente do CSV | 0 |
-| Verificações API × pandas | **22 / 22 aprovadas** |
+| Verificações API × pandas | **23 / 23 aprovadas** |
 
-As verificações cobrem total de leituras, contagem por tipo de peça, média, mediana, desvio padrão, quartis, mínimo e máximo do nível, distribuição por status, número de alertas por tipo e alertas ativos. Detalhes em `dados/resultados/validacao_integracao.json`.
+As verificações cobrem total de leituras, contagem por tipo de peça, média, mediana, desvio padrão, quartis, mínimo e máximo do nível, distribuição por status, número de alertas por tipo (incluindo ENCHIMENTO_RAPIDO: 15 no pandas e 15 na API) e alertas ativos. Detalhes em `dados/resultados/validacao_integracao.json`.
 
 A análise também roda diretamente sobre os dados persistidos (`analise_estatistica.py --fonte api`) e reproduz os mesmos indicadores. Isso confirma que o pipeline CIDA → API → banco → API → CIDA preserva os dados sem perda.
 
@@ -262,7 +273,7 @@ A análise também roda diretamente sobre os dados persistidos (`analise_estatis
 3. **Monitorar a concentração de conflitos AMBAS.** Conflitos isolados são raros; conflitos em sequência indicam deriva do capacitivo e pedem recalibração.
 4. **Tratar a falha de conexão como alarme de manutenção.** A assinatura (dois sensores ≈ 0) é inequívoca e teve 100% de precisão.
 5. **Gargalos custam 4,6% da disponibilidade** e, depois de destravados, provocam rajadas que aceleram o enchimento. Liberar o acúmulo de forma controlada reduz o risco de nível crítico.
-6. **Revisar a política de alertas:** rebaixar RESERVATORIO_BAIXO e agrupar CONTAGEM_ANOMALA. Isso deixaria ~8 alertas acionáveis por dia, em vez de 21.
+6. **Revisar a política de alertas:** rebaixar RESERVATORIO_BAIXO e agrupar CONTAGEM_ANOMALA. Isso deixaria ~10 alertas acionáveis por dia (incluindo os de enchimento rápido), em vez de 23.
 
 ---
 

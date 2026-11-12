@@ -7,14 +7,14 @@
       "201": 9965
     },
     "sucesso_pct": 100.0,
-    "duracao_s": 53.7,
-    "leituras_por_segundo": 185.7,
+    "duracao_s": 134.4,
+    "leituras_por_segundo": 74.1,
     "status_reservatorio_divergente_do_csv": 0,
     "exemplos_de_falha": []
   },
   "validacao": {
-    "aprovadas": 22,
-    "total": 22,
+    "aprovadas": 23,
+    "total": 23,
     "checagens": [
       {
         "metrica": "total de leituras (GET /leituras)",
@@ -140,6 +140,12 @@
         "metrica": "alertas gerados CONTAGEM_ANOMALA",
         "local": 50,
         "api": 50,
+        "ok": true
+      },
+      {
+        "metrica": "alertas gerados ENCHIMENTO_RAPIDO",
+        "local": 15,
+        "api": 15,
         "ok": true
       },
       {
