@@ -181,7 +181,7 @@ Edite o `config.json`:
 .\.venv\Scripts\python gateway.py               # envio real, em loop (Ctrl+C para parar)
 ```
 
-Com `heartbeat_s: 0`, o gateway envia **somente quando uma peça passa** pelos sensores. Ao iniciar, ele mostra `gateway iniciado` e `aguardando pecas`; depois fica quieto até uma peça passar, quando aparecem `peca detectada` e `enviado: METALICA | nivel ... | HTTP 201`.
+Com `heartbeat_s: 0`, o gateway envia **somente quando uma peça passa** pelos sensores. Ao iniciar, ele mostra `gateway iniciado` e `aguardando pecas`; depois fica quieto até uma peça passar, quando aparecem `peca detectada`, `classificada: METALICA (na janela: indutivo=True capacitivo=True)` e `enviado: METALICA | nivel ... | HTTP 201`.
 
 ### Como confirmar que funcionou
 
@@ -197,7 +197,7 @@ curl.exe http://localhost:8080/api/v1/esteira/status
 
 Se aparecer `falha ao enviar` no gateway, a API está inacessível (back-end parado, IP/porta errados ou firewall do Windows bloqueando a porta 8080). `API recusou (4xx)` indica payload ou chave recusada.
 
-> **Limitação conhecida.** O gateway envia `api_token` no cabeçalho `Authorization: Bearer`, mas o back-end valida o cabeçalho `X-API-Key`. Se o back-end estiver com `API_KEY` preenchida, o gateway recebe HTTP 401. Enquanto isso não for corrigido no código, mantenha `API_KEY` vazia no ambiente do laboratório.
+> **Chave do dispositivo.** Se o back-end tiver `API_KEY` preenchida no `.env`, coloque o mesmo valor em `api_key` no `automacao/config.json`. O gateway envia a chave no cabeçalho `X-API-Key`, que é o que o back-end valida. Chave diferente ou ausente → `API recusou (401)`.
 
 Mais detalhes em [automacao/README.md](../automacao/README.md).
 
@@ -280,17 +280,18 @@ No PowerShell, `curl` é um apelido de `Invoke-WebRequest`; por isso o comando �
 | Gateway envia uma leitura `METALICA` com a esteira vazia | Portas do indutivo e capacitivo trocadas no `config.json` | Confira com `--sondar` (seção 5) |
 | Nível sempre 0% e alerta de reservatório baixo | `vazio_raw`/`cheio_raw` fora da faixa real | Recalibre (seção 5) |
 | Gateway: `falha ao enviar` | API inacessível pelo IP | Back-end no ar? Firewall liberando a porta 8080? |
-| Gateway recebe HTTP 401 | Back-end com `API_KEY` e gateway enviando `Bearer` | Veja a limitação na seção 5 |
+| Gateway recebe HTTP 401 | `API_KEY` do back-end diferente do `api_key` do `config.json` | Use o mesmo valor nos dois (seção 5) |
 | `analise_estatistica.py --fonte api`: erro ou sem dados | O banco ainda está vazio | Rode o gateway e passe peças |
 | Dashboard mostra milhares de leituras que não são dos sensores | Rodou `enviar_para_api.py` (dados sintéticos) no banco real | `docker compose down -v` e suba o MySQL de novo |
 | Acentos quebrados no console | Codificação do terminal | Os scripts já forçam UTF-8; use o Windows Terminal |
+| Alertas com `ReservatÃ³rio` / `peÃ§a` no dashboard | Classes antigas compiladas sem UTF-8 (antes do ajuste no `pom.xml`) | Pare a API e rode `.\mvnw.cmd clean spring-boot:run`; a migration V2 corrige os textos já gravados |
 
 ## 9. Status do projeto
 
 ### Concluído
 
-- **Back-end:** API REST validada contra MySQL real, com status do reservatório calculado no domínio, alertas deduplicados e resolvidos automaticamente, estatísticas, endpoint `/esteira/status`, API key opcional no POST e Swagger. 60 testes automatizados, incluindo integração contra MySQL real (Testcontainers).
-- **Front-end:** dashboard em React/Vite consumindo a API.
+- **Back-end:** API REST validada contra MySQL real, com status do reservatório calculado no domínio, alertas deduplicados e resolvidos automaticamente, estatísticas, endpoint `/esteira/status` para dashboard e RA, CRUD de usuários com perfis, API key opcional no POST, health check (`/actuator/health`) e Swagger. Testes automatizados incluindo integração contra MySQL real (Testcontainers).
+- **Front-end:** dashboard em React/Vite com React Router (4 rotas), Bootstrap e atualização automática.
 - **Automação:** gateway IO-Link lendo os sensores reais e enviando à API.
 - **Ciência de Dados:** dataset sintético reproduzível, análise estatística, gráficos, relatório e validação API x pandas; análise também disponível sobre as leituras reais (`--fonte api`).
 
@@ -299,8 +300,6 @@ No PowerShell, `curl` é um apelido de `Invoke-WebRequest`; por isso o comando �
 | Item | Observação |
 |---|---|
 | Calibração do nível | Definir `vazio_raw` e `cheio_raw` com o reservatório real (seção 5) |
-| Gateway × API key | Alinhar o cabeçalho (`Authorization: Bearer` × `X-API-Key`) |
-| Nuvem | Dockerfile e compose prontos; falta pipeline de deploy |
+| Nuvem | Arquitetura definida em [arquitetura_nuvem.md](arquitetura_nuvem.md); falta hospedar com a conta da equipe |
 | Autenticação (JWT) | Prevista no plano técnico para a fase 2 |
-| Observabilidade | Adicionar `spring-boot-starter-actuator` (health, métricas); hoje `/actuator` não está exposto |
-| Revisão da política de alertas | Alerta baixo informativo, agrupar conflitos, alerta preditivo de transbordo |
+| Revisão da política de alertas | Alerta baixo informativo, alerta preditivo de transbordo |

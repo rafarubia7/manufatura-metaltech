@@ -259,33 +259,24 @@ O dashboard pode conter os seguintes blocos:
 
 ---
 
-## 8. Estrutura mínima recomendada do front-end
+## 8. Estrutura implementada do front-end
 
-### Tela 1 — Dashboard principal
+O roteamento usa **React Router** (`BrowserRouter` em `main.jsx`, `Routes` em `App.jsx`). Cada rota é um componente em `src/components/`:
 
-- cards com indicadores principais
-- status do reservatório
-- quantidade de alertas
-- última leitura
+| Rota | Componente | Conteúdo | Atualização |
+|---|---|---|---|
+| `/` | `PainelAoVivo` | Cards de metálicas, plásticas, desconhecidas e ocorrências ativas; nível do reservatório com status; últimas 5 leituras | a cada 4 s |
+| `/analise` | `GraficosHistorico` | Evolução do nível (com as linhas de 80% e 95%), distribuição por tipo de peça e resumo estatístico: média, mediana, desvio, mínimo, máximo e quartis | a cada 10 s |
+| `/ocorrencias` | `TabelaManutencoes` | Alertas pendentes com data, tipo legível e botão "Marcar como resolvido" | botão Atualizar |
+| `/usuarios` | `GestaoUsuarios` | CRUD de usuários (formulário + tabela, ativar/desativar, excluir) | ao salvar |
+| qualquer outra | — | redireciona para `/` | — |
 
-### Tela 2 — Leituras
+- `NavBar` recebe o número de alertas por prop (`qtdAlertas`) e mostra o contador na rota Ocorrências.
+- `App` guarda o estado global (conexão com a API, alertas e tema) e o repassa às rotas por props. Exemplo: `TabelaManutencoes` recebe `aoAlterarAlertas` para atualizar o contador assim que um alerta é resolvido.
+- Todas as chamadas HTTP ficam em `src/services/api.js`.
+- Estilo: Bootstrap 5 (grid responsivo, tabelas, formulários, badges) mais as variáveis de tema em `index.css`. O tema escuro também vale para os componentes do Bootstrap (`data-bs-theme`).
 
-- tabela com leituras recentes
-- filtro por período
-- filtro por tipo de peça
-- filtro por status do reservatório
-
-### Tela 3 — Alertas
-
-- lista de alertas ativos
-- botão para marcar como resolvido
-- exibir tipo do alerta e timestamp
-
-### Tela 4 — Estatísticas
-
-- gráfico ou cards com contagem por tipo de peça
-- indicadores globais
-- métricas operacionais
+> **Hospedagem:** como as rotas são do navegador, o servidor estático precisa devolver `index.html` para `/analise`, `/ocorrencias` e `/usuarios`. O `npm run dev` e o `npm run preview` já fazem isso. Na nuvem, ver [arquitetura_nuvem.md](arquitetura_nuvem.md).
 
 ---
 
@@ -385,15 +376,21 @@ Ele deve apontar para o IP do PC que está rodando o back-end.
 ```json
 {
   "ultimaLeitura": "2026-11-08T23:58:41Z",
-  "dispositivoId": "ESP32-001",
+  "dispositivoId": "gateway-lab-01",
   "nivelReservatorioPercentual": 82.5,
   "statusReservatorio": "ALERTA_ALTO",
   "totalMetalicas": 6000,
   "totalNaoMetalicas": 3303,
   "totalDesconhecidas": 613,
-  "totalAmbas": 50,
-  "alertasAtivos": 2
+  "totalAmbas": 0,
+  "alertasAtivos": 2,
+  "tiposAlertaAtivos": ["ENCHIMENTO_RAPIDO", "RESERVATORIO_ALTO"],
+  "exibirAlerta": true
 }
 ```
+
+- `exibirAlerta` é `true` quando o reservatório está **perto da capacidade máxima** (`ALERTA_ALTO` ou `CRITICO`) **ou fora do padrão identificado pela Ciência de Dados** (alerta `ENCHIMENTO_RAPIDO` ativo, enchimento acima de 5 %/min). É o campo que a RA usa para o indicativo visual de alerta (seção 5.5 do documento oficial).
+- `tiposAlertaAtivos` diz qual é o motivo, para mostrar a mensagem certa.
+- `totalAmbas` fica sempre em 0 nos dados novos (indutivo + capacitivo = metálica).
 
 Responde `404` (`NAO_ENCONTRADO`) enquanto não existir nenhuma leitura. Use polling a cada poucos segundos.

@@ -1,61 +1,47 @@
 # MetalTech Monitoramento Industrial
 
-Monitoramento de uma esteira de triagem de peças com sensores de distância, indutivo e capacitivo. O projeto inclui uma API REST em Java/Spring Boot e uma base de pipeline de Ciência de Dados em Python para geração, análise e validação das leituras.
+Plataforma de monitoramento de uma esteira de triagem de peças, desenvolvida no **Projeto Interdisciplinar II** (situação-problema em [docs/projeto.md](docs/projeto.md)). Sensores IO-Link reais (distância, indutivo e capacitivo) classificam cada peça e medem o nível do reservatório. Um gateway envia as leituras para uma API REST em Spring Boot. Um dashboard React, a análise de Ciência de Dados e o aplicativo de Realidade Aumentada consomem a mesma API.
 
-## Objetivo
+```mermaid
+flowchart LR
+    S[Sensores IO-Link<br/>O5D150 · KI5309 · IF6123] --> M[Mestre ifm AL1300]
+    M --> G[automacao/gateway.py]
+    G -->|POST /api/v1/leituras| A[API REST<br/>Spring Boot + MySQL]
+    A --> F[Dashboard React]
+    A --> RA[App de RA]
+    A --> D[Ciência de Dados<br/>pandas]
+```
 
-Coletar, armazenar, analisar e disponibilizar as leituras dos sensores para:
+## Entregáveis (seção 7 do documento oficial)
 
-- classificar peças (metálica / não metálica);
-- monitorar o nível do reservatório;
-- gerar alertas operacionais;
-- alimentar dashboards e análise técnica.
+| Entregável | Onde está |
+|---|---|
+| Código-fonte do back-end (API REST) | [backend/](backend/) — contrato em [docs/contrato_api.md](docs/contrato_api.md), Swagger em `/swagger-ui.html` |
+| Código-fonte do front-end (React) | [frontend/](frontend/) — guia em [docs/guia_frontend.md](docs/guia_frontend.md) |
+| Firmware/software da Automação Industrial | [automacao/gateway.py](automacao/gateway.py) — circuito em [docs/documentacao_circuito.md](docs/documentacao_circuito.md) |
+| Aplicativo de Realidade Aumentada | *em integração: consome `GET /api/v1/esteira/status`* |
+| Relatório de Ciência de Dados | [docs/relatorio_ciencia_dados.md](docs/relatorio_ciencia_dados.md) — scripts e gráficos em [dados/](dados/) |
+| Documento de arquitetura de nuvem | [docs/arquitetura_nuvem.md](docs/arquitetura_nuvem.md) |
+| Plano de entrega e pendências | [docs/roadmap_projeto.md](docs/roadmap_projeto.md) |
+
+## O que cada unidade curricular entrega
+
+| Unidade curricular | Implementação |
+|---|---|
+| Automação Industrial | Leitura dos 3 sensores pelo mestre IO-Link, histerese, classificação em janela de 0,5 s, envio HTTP com fila e reenvio quando a API cai |
+| Ciência de Dados | Estatística descritiva (média, mediana, moda, desvio, quartis), gráficos de linha, barras, dispersão, histograma e boxplot, outliers e critério de alerta (enchimento > 5 %/min), validados contra a API |
+| Computação em Nuvem | Arquitetura PaaS (Elastic Beanstalk + RDS + S3/CloudFront) com segurança, disponibilidade, escalabilidade e custos justificados |
+| Desenvolvimento Back-end | Modelagem orientada a objetos (hierarquia `Sensor` → `SensorIndutivo`/`SensorCapacitivo` com polimorfismo, `Usuario` encapsulado com perfis), CRUD de leituras e de usuários, alertas, estatísticas, 72 testes automatizados e 90,8% de cobertura de linhas |
+| Frameworks Front-end | React + React Router (4 rotas), componentes com props e estado, Bootstrap 5, tema claro/escuro, atualização automática |
+| Realidade Aumentada | Endpoint dedicado `GET /api/v1/esteira/status`, com nível, status, contagens por tipo e alertas ativos |
 
 ## Stack
 
-- Back-end: Java 17, Spring Boot 3.2, Spring Data JPA, MySQL 8.0, Flyway, Springdoc OpenAPI, H2 (testes), Maven Wrapper
-- Ciência de Dados: Python 3.11+, pandas, numpy, scipy, matplotlib, requests
-- Infra local: Docker Compose com MySQL
-
-## Estado atual do projeto
-
-### Back-end
-Status: funcional e validado em ambiente local com MySQL.
-
-Concluído:
-- API REST estruturada em Java/Spring Boot
-- entidades, DTOs, repositórios e serviços baseados em domínio
-- lógica de negócio para leitura de sensores e alertas
-- cálculo do status do reservatório e regras de deduplicação
-- estatísticas operacionais e endpoints de consulta
-- testes automatizados do backend com sucesso
-
-Pendente de refinamento:
-- revisão final de documentação e onboarding
-- consolidar ambiente de execução e operacionalização
-- melhorar observabilidade e robustez de produção
-
-### Ciência de Dados
-Status: dataset sintético, análise estatística e relatório concluídos; análise sobre leituras reais do gateway em andamento.
-
-Concluído:
-- geração de dataset sintético reproduzível
-- análise estatística exploratória
-- extração de métricas operacionais
-- detecção de padrões e outliers
-- geração de gráficos e resultados em arquivos estruturados
-- relatório técnico (`docs/relatorio_ciencia_dados.md`)
-
-Pendente:
-- repetir a análise com leituras reais do gateway (`--fonte api`)
-- registrar no relatório a comparação entre dados sintéticos e reais
-
-### Front-end e próximas etapas
-Status: dashboard (`frontend/`) e gateway IO-Link (`automacao/`) já estão no repositório e usam dados reais.
-
-Ainda pendente:
-- deploy/infra de nuvem
-- autenticação e observabilidade
+- **Back-end:** Java 17, Spring Boot 3.2, Spring Data JPA, MySQL 8.0, Flyway, Springdoc OpenAPI, JUnit 5, Testcontainers, JaCoCo
+- **Front-end:** React 19, React Router 7, Bootstrap 5, Recharts, Vite
+- **Automação:** Python 3, mestre IO-Link ifm AL1300 (HTTP/JSON)
+- **Ciência de Dados:** Python 3.11+, pandas, numpy, scipy, matplotlib
+- **Infra local:** Docker Compose (MySQL e, opcionalmente, o back-end)
 
 ## Estrutura do repositório
 
@@ -63,29 +49,35 @@ Ainda pendente:
 .
 ├── backend/                     API REST (Spring Boot)
 │   ├── src/main/java/...        domain · application · api · infrastructure
-│   ├── src/main/resources/      application.yml, Flyway e configs
-│   ├── src/test/                testes unitários e de integração
+│   ├── src/main/resources/      application.yml e migrations Flyway (V1–V3)
+│   ├── src/test/                testes unitários e de integração (H2 e MySQL)
 │   └── Dockerfile
 ├── frontend/                    Dashboard web (React + Vite)
+│   └── src/components/          NavBar, PainelAoVivo, GraficosHistorico, TabelaManutencoes, GestaoUsuarios
 ├── automacao/                   Gateway IO-Link: lê os sensores reais e envia à API
 ├── dados/                       Ciência de Dados (CIDA)
 │   ├── gerar_dataset.py         geração do dataset sintético
 │   ├── analise_estatistica.py   estatísticas, outliers e gráficos (CSV ou API)
-│   ├── enviar_para_api.py       envia o dataset sintético para a API e valida API x pandas
-│   ├── script_ponte_iolink.py   ponte IO-Link (HEX) para a API
-│   ├── leituras_simuladas.csv   dataset principal
-│   ├── eventos_simulados.csv    eventos/anomalias
-│   ├── graficos/                arquivos gráficos gerados
+│   ├── enviar_para_api.py       envia o dataset para a API e valida API × pandas
+│   ├── script_ponte_iolink.py   ponte IO-Link alternativa (o caminho em uso é automacao/gateway.py)
+│   ├── graficos/                gráficos do relatório
 │   └── resultados/              JSON, CSV, resumo e validação
 ├── docs/
-│   ├── guia_execucao.md        guia de execução do projeto
-│   ├── guia_frontend.md        guia de integração do front-end
-│   └── roadmap_projeto.md      roadmap da etapa atual e próximos passos
-├── docker-compose.yml           infraestrutura local do MySQL
+│   ├── projeto.md               situação-problema oficial
+│   ├── contrato_api.md          contrato da API comum
+│   ├── arquitetura_nuvem.md     arquitetura de nuvem
+│   ├── documentacao_circuito.md circuito e sensores
+│   ├── relatorio_ciencia_dados.md
+│   ├── guia_execucao.md         passo a passo completo de execução
+│   ├── guia_frontend.md         integração do front-end
+│   └── roadmap_projeto.md       plano de entrega
+├── docker-compose.yml
 └── README.md
 ```
 
 ## Execução rápida
+
+Passo a passo completo em [docs/guia_execucao.md](docs/guia_execucao.md).
 
 ### 0. Credenciais
 
@@ -93,40 +85,27 @@ Ainda pendente:
 Copy-Item .env.example .env
 ```
 
-Edite o `.env` e defina as senhas. O `.env` não vai para o Git. Sem ele, o `docker compose` falha com `required variable MYSQL_PASSWORD is missing a value`.
-
-Ao rodar o back-end localmente (`mvnw spring-boot:run`), o Spring não lê o `.env`: carregue as variáveis na sessão do PowerShell, como descrito em [docs/guia_execucao.md](docs/guia_execucao.md) (Passo 3). Esse guia também cobre o front-end, o gateway IO-Link e a Ciência de Dados.
+Edite o `.env` e defina as senhas. Ele não vai para o Git. O back-end lê o `../.env` sozinho quando roda a partir de `backend/`.
 
 ### 1. Banco de dados
 
 ```powershell
-cd <pasta-do-projeto>
 docker compose up -d mysql
-docker compose ps
+docker compose ps    # aguarde "healthy" (porta 3307 no host)
 ```
-
-Aguarde o status `healthy` e confirme a porta do host `3307`.
 
 ### 2. Back-end
 
 ```powershell
 cd backend
-.\mvnw.cmd test
-.\mvnw.cmd spring-boot:run
+.\mvnw.cmd clean verify          # testes + cobertura (o teste MySQL precisa do Docker)
+.\mvnw.cmd clean spring-boot:run
 ```
-
-A API fica disponível em:
 
 - Swagger: http://localhost:8080/swagger-ui.html
 - Base da API: http://localhost:8080/api/v1
 
-Se a porta 8080 estiver ocupada:
-
-```powershell
-cd backend
-$env:SERVER_PORT = "8081"
-.\mvnw.cmd spring-boot:run
-```
+Use sempre `clean` depois de atualizar o código, para recompilar todas as classes.
 
 ### 3. Front-end
 
@@ -136,12 +115,15 @@ npm install
 npm run dev
 ```
 
+Rotas: `/` (monitoramento ao vivo), `/analise`, `/ocorrencias` e `/usuarios`.
+
 ### 4. Gateway IO-Link (dados reais)
 
 ```powershell
 cd automacao
 python -m venv .venv
 .\.venv\Scripts\python -m pip install -r requirements.txt
+Copy-Item .\config.example.json .\config.json   # ajuste mestre_url, api_url e a calibração
 .\.venv\Scripts\python gateway.py --sondar
 .\.venv\Scripts\python gateway.py
 ```
@@ -162,71 +144,26 @@ Para analisar as leituras reais gravadas pelo gateway: `.\.venv\Scripts\python a
 
 | Método | Rota | Descrição |
 |---|---|---|
-| POST | `/api/v1/leituras` | Registra uma leitura de sensores |
+| POST | `/api/v1/leituras` | Registra uma leitura (dispositivo; `X-API-Key` se configurada) |
 | GET | `/api/v1/leituras` | Lista leituras com paginação e filtros |
-| GET | `/api/v1/leituras/{id}` | Busca leitura por id |
+| GET / PUT / DELETE | `/api/v1/leituras/{id}` | Busca, corrige ou exclui uma leitura |
 | GET | `/api/v1/leituras/alertas` | Lista alertas pendentes |
 | PUT | `/api/v1/leituras/alertas/{id}/resolver` | Resolve um alerta |
-| GET | `/api/v1/leituras/estatisticas` | Retorna indicadores operacionais |
-| GET | `/api/v1/esteira/status` | Estado atual da esteira (último nível, contagens e alertas ativos) |
-
-Documentação interativa:
-- http://localhost:8080/swagger-ui.html
+| GET | `/api/v1/leituras/estatisticas` | Indicadores operacionais |
+| GET | `/api/v1/esteira/status` | Estado atual da esteira (dashboard e RA) |
+| GET / POST | `/api/v1/usuarios` | Lista ou cadastra usuários |
+| GET / PUT / DELETE | `/api/v1/usuarios/{id}` | Busca, atualiza ou exclui um usuário |
 
 ## Regras de negócio
 
-- Status do reservatório:
-  - baixo: < 20%
-  - normal: 20–80%
-  - alto: > 80%
-  - crítico: ≥ 95%
-- Alertas automáticos são gerados pela regra de negócio do backend
-- Quando a condição de alerta deixa de existir, o alerta pode ser resolvido automaticamente
-- Conflitos entre sensores são considerados anomalias e devem gerar alertas correspondentes
+- Status do reservatório: baixo < 20%, normal 20–80%, alto > 80%, crítico ≥ 95%.
+- Alertas de reservatório: um ativo por tipo e dispositivo, resolvido sozinho quando a condição muda.
+- Enchimento rápido (critério da CIDA): mais de 5 %/min na janela anterior de 3 min.
+- Indutivo e capacitivo acionados juntos indicam peça metálica (o capacitivo também reage a metal), não um conflito.
+- O back-end recalcula o tipo da peça e o status a partir dos sensores. O que o dispositivo informa é só referência.
 
-## Ciência de Dados
+## Qualidade
 
-O pipeline de CIDA foi estruturado para:
-
-- gerar um dataset sintético reproduzível e consistente
-- analisar a operação da esteira e o comportamento do reservatório
-- identificar padrões, anomalias e outliers
-- comparar a análise com as leituras reais do gateway (`--fonte api`)
-
-A análise técnica e os relatórios encontram-se em:
-
-- [docs/relatorio_ciencia_dados.md](docs/relatorio_ciencia_dados.md)
-
-## Status final da etapa atual
-
-### Concluído
-- backend funcional com MySQL real
-- testes automatizados do backend executando com sucesso
-- gateway IO-Link lendo os sensores reais e enviando à API
-- dashboard consumindo a API
-- documentação de uso e integração organizada
-
-### Pendência de continuidade
-- calibração do nível do reservatório (`vazio_raw`/`cheio_raw` do gateway)
-- nuvem/deploy
-- autenticação e observabilidade
-- refinamento final da documentação acadêmica e operacional
-
-## Caminho recomendado para a próxima etapa
-
-1. Validar o backend local com MySQL em funcionamento
-2. Calibrar o gateway e validar o fluxo sensores → API → dashboard
-3. Acumular leituras reais e rodar a análise estatística
-4. Concluir a documentação operacional e onboarding
-
-## Observações importantes
-
-- Cobertura de testes medida com JaCoCo (`cd backend; .\mvnw.cmd verify`, relatório em `backend/target/site/jacoco/index.html`): **90% das linhas**; o build falha abaixo de 70%. O teste de integração com MySQL usa Testcontainers e precisa do Docker ativo.
-- O projeto usa MySQL por padrão na versão atual; PostgreSQL deixou de ser a referência principal da execução local.
-- O Docker é usado para o banco e não para o front-end.
-- O front-end usa, por padrão, o mesmo host em que a página foi aberta (porta 8080); não é preciso editar IP. Em outro PC, abra o dashboard pelo IP do PC que roda o backend.
-
-Mais detalhes e instruções em:
-- [docs/guia_execucao.md](docs/guia_execucao.md)
-- [docs/guia_frontend.md](docs/guia_frontend.md)
-- [docs/roadmap_projeto.md](docs/roadmap_projeto.md)
+- **72 testes automatizados** (unitários, integração com H2 e integração com MySQL real via Testcontainers).
+- Cobertura JaCoCo de **90,8% das linhas**. O build falha abaixo de 70%. Relatório em `backend/target/site/jacoco/index.html` depois do `verify`.
+- Migrations versionadas com Flyway. Em `ddl-auto: validate`, o Hibernate confere se as entidades batem com o banco.
