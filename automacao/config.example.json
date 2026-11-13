@@ -23,9 +23,9 @@
         "amostras_mediana": 5
     },
     "nivel": {
-        "limite_atencao": 70,
-        "limite_critico": 90,
-        "limite_baixo": null,
+        "limite_atencao": 80,
+        "limite_critico": 95,
+        "limite_baixo": 20,
         "nomes": {
             "normal": "NORMAL",
             "atencao": "ALERTA_ALTO",
@@ -39,7 +39,7 @@
     "intervalo_leitura_s": 0.1,
     "heartbeat_s": 0,
     "api_url": "http://localhost:8080/api/v1/leituras",
-    "api_token": null,
+    "api_key": null,
     "dispositivo_id": "gateway-lab-01",
     "versao_firmware": "gateway-0.2"
 }
