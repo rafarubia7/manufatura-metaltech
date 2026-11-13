@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.metaltech.monitoramento.domain.model.LeituraSensores;
 import com.metaltech.monitoramento.domain.model.StatusReservatorio;
+import com.metaltech.monitoramento.domain.model.TipoAlerta;
 import com.metaltech.monitoramento.domain.model.TipoPeca;
 import com.metaltech.monitoramento.infrastructure.repository.AlertaNivelRepository;
 import com.metaltech.monitoramento.infrastructure.repository.LeituraSensoresRepository;
@@ -56,6 +58,36 @@ class EsteiraStatusServiceTest {
         assertThat(status.totalNaoMetalicas()).isEqualTo(3L);
         assertThat(status.totalDesconhecidas()).isEqualTo(1L);
         assertThat(status.alertasAtivos()).isEqualTo(2L);
+        assertThat(status.exibirAlerta()).isTrue(); // ALERTA_ALTO = perto da capacidade
+    }
+
+    private void prepararUltimaLeitura(double percentual, StatusReservatorio statusReservatorio) {
+        LeituraSensores ultima = new LeituraSensores(1L, Instant.parse("2026-11-03T10:00:00Z"), 9.5, true, 0.85,
+                false, 0.12, TipoPeca.METALICA, percentual, statusReservatorio, "ESP32-001", "1.0.0",
+                Collections.emptyList());
+        when(leituraRepository.findFirstByOrderByDataHoraDescIdDesc()).thenReturn(Optional.of(ultima));
+    }
+
+    @Test
+    void deveExibirAlertaQuandoOEnchimentoEstaForaDoPadraoMesmoComNivelNormal() {
+        prepararUltimaLeitura(45.0, StatusReservatorio.NORMAL);
+        when(alertaRepository.listarTiposNaoResolvidos()).thenReturn(List.of(TipoAlerta.ENCHIMENTO_RAPIDO));
+
+        EsteiraStatus status = service.obterStatusAtual();
+
+        assertThat(status.tiposAlertaAtivos()).containsExactly("ENCHIMENTO_RAPIDO");
+        assertThat(status.exibirAlerta()).isTrue();
+    }
+
+    @Test
+    void naoDeveExibirAlertaComNivelNormalOuBaixoESemEnchimentoRapido() {
+        prepararUltimaLeitura(10.0, StatusReservatorio.ALERTA_BAIXO);
+        when(alertaRepository.listarTiposNaoResolvidos()).thenReturn(List.of(TipoAlerta.RESERVATORIO_BAIXO));
+
+        EsteiraStatus status = service.obterStatusAtual();
+
+        assertThat(status.tiposAlertaAtivos()).containsExactly("RESERVATORIO_BAIXO");
+        assertThat(status.exibirAlerta()).isFalse();
     }
 
     @Test

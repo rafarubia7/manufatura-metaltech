@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Instant;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +31,8 @@ class EsteiraControllerTest {
     @Test
     void deveRetornarStatusAtual() throws Exception {
         when(statusService.obterStatusAtual()).thenReturn(new EsteiraStatus(
-                Instant.parse("2026-11-03T10:00:00Z"), "ESP32-001", 82.5, "ALERTA_ALTO", 6, 3, 1, 0, 2));
+                Instant.parse("2026-11-03T10:00:00Z"), "ESP32-001", 82.5, "ALERTA_ALTO", 6, 3, 1, 0, 2,
+                List.of("ENCHIMENTO_RAPIDO", "RESERVATORIO_ALTO"), true));
 
         mockMvc.perform(get("/api/v1/esteira/status"))
                 .andExpect(status().isOk())
@@ -38,7 +40,9 @@ class EsteiraControllerTest {
                 .andExpect(jsonPath("$.nivelReservatorioPercentual").value(82.5))
                 .andExpect(jsonPath("$.statusReservatorio").value("ALERTA_ALTO"))
                 .andExpect(jsonPath("$.totalMetalicas").value(6))
-                .andExpect(jsonPath("$.alertasAtivos").value(2));
+                .andExpect(jsonPath("$.alertasAtivos").value(2))
+                .andExpect(jsonPath("$.tiposAlertaAtivos[0]").value("ENCHIMENTO_RAPIDO"))
+                .andExpect(jsonPath("$.exibirAlerta").value(true));
     }
 
     @Test
