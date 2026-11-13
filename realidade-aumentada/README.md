@@ -61,7 +61,7 @@ ra-manotech/
 3. Fique na mesma posição de onde a foto da esteira foi tirada e aponte o celular para a **esteira**, enquadrando-a como na foto.
    - Sem acesso à esteira? Dá para testar apontando para a própria foto na tela do computador.
 4. Confira:
-   - [ ] O selo amarelo **⚠ DADOS DE TESTE (SIMULADOS)** aparece no topo;
+   - [ ] O selo amarelo **⚠ DADOS SIMULADOS** aparece no topo;
    - [ ] Os valores exibidos são fictícios (simulados), conforme o aviso no topo deste README;
    - [ ] Ao reconhecer a esteira, aparecem os dois painéis (contagem e nível);
    - [ ] Os números mudam a cada 3 segundos;
