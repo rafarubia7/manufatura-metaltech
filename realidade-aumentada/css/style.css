@@ -225,7 +225,8 @@ body {
   font-weight: 700;
 }
 
-/* Cores de alerta: verde < 70%, amarelo 70–89%, vermelho >= 90% */
+/* Cores conforme o status: verde normal (inclui nível baixo),
+   amarelo a partir de 80%, vermelho a partir de 95% (js/config.js) */
 .nivel-normal .barra-preenchimento { background: var(--verde); }
 .nivel-normal .nivel-alerta { color: var(--verde); }
 
@@ -235,3 +236,39 @@ body {
 .nivel-critico .barra-preenchimento { background: var(--vermelho); }
 .nivel-critico .nivel-alerta { color: var(--vermelho); }
 .nivel-critico { border-color: var(--vermelho); }
+
+/* Faixa "Enchimento acima do padrão" (pisca enquanto estiver visível) */
+.faixa-enchimento {
+  margin: 0.6em 0 0;
+  padding: 0.45em 0.6em;
+  border-radius: 0.5em;
+  background: var(--vermelho);
+  color: #ffffff;
+  font-size: 0.85em;
+  font-weight: 800;
+  text-align: center;
+  animation: piscar-faixa 1s ease-in-out infinite;
+}
+
+@keyframes piscar-faixa {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* "Atualizado há X s": texto pequeno e discreto */
+.atualizado-ha {
+  margin: 0.5em 0 0;
+  font-size: 0.72em;
+  color: var(--texto-suave);
+  opacity: 0.8;
+}
+
+/* Sem animações para quem pediu menos movimento no sistema */
+@media (prefers-reduced-motion: reduce) {
+  .faixa-enchimento {
+    animation: none;
+  }
+  .barra-preenchimento {
+    transition: none;
+  }
+}
