@@ -1,26 +1,24 @@
 // src/App.jsx
 import React, { useState, useEffect } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import NavBar from './components/NavBar';
 import PainelAoVivo from './components/PainelAoVivo';
 import GraficosHistorico from './components/GraficosHistorico';
 import TabelaManutencoes from './components/TabelaManutencoes';
+import GestaoUsuarios from './components/GestaoUsuarios';
 import { buscarAlertas, buscarEstatisticas } from './services/api';
 
 function App() {
-  const [abaAtiva, setAbaAtiva] = useState('ao-vivo');
   const [apiOnline, setApiOnline] = useState(false);
   const [qtdAlertas, setQtdAlertas] = useState(0);
   const [tema, setTema] = useState(() => localStorage.getItem('metaltech-tema') || 'light');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', tema);
+    document.documentElement.setAttribute('data-bs-theme', tema); // tema escuro também nos componentes do Bootstrap
     localStorage.setItem('metaltech-tema', tema);
   }, [tema]);
 
-  useEffect(() => {
-    verificarStatusSistema();
-    const intervalo = setInterval(verificarStatusSistema, 5000);
-    return () => clearInterval(intervalo);
-  }, []);
 
   const alternarTema = () => {
     setTema((prev) => (prev === 'light' ? 'dark' : 'light'));
@@ -36,10 +34,16 @@ function App() {
         ? alertas.filter((a) => !a.resolvido).length
         : 0;
       setQtdAlertas(ativos);
-    } catch (error) {
+    } catch {
       setApiOnline(false);
     }
   };
+
+  useEffect(() => {
+    verificarStatusSistema();
+    const intervalo = setInterval(verificarStatusSistema, 5000);
+    return () => clearInterval(intervalo);
+  }, []);
 
   return (
     <div className="min-vh-100 d-flex flex-column">
@@ -53,7 +57,7 @@ function App() {
                 MetalTech
               </span>
               <span className="text-theme-secondary d-none d-sm-inline" style={{ fontSize: '0.82rem' }}>
-                Linha de Seleção • ESP32-001
+                Esteira de triagem
               </span>
             </div>
 
@@ -91,45 +95,20 @@ function App() {
             </div>
           </div>
 
-          {/* Linha inferior: Navegação por abas */}
-          <nav className="d-flex align-items-center mt-1">
-            <button
-              className={`tab-nav-item ${abaAtiva === 'ao-vivo' ? 'active' : ''}`}
-              onClick={() => setAbaAtiva('ao-vivo')}
-            >
-              Monitoramento
-            </button>
-
-            <button
-              className={`tab-nav-item ${abaAtiva === 'relatorios' ? 'active' : ''}`}
-              onClick={() => setAbaAtiva('relatorios')}
-            >
-              Análise e Histórico
-            </button>
-
-            <button
-              className={`tab-nav-item ${abaAtiva === 'ocorrencias' ? 'active' : ''}`}
-              onClick={() => setAbaAtiva('ocorrencias')}
-            >
-              <span>Ocorrências</span>
-              {qtdAlertas > 0 && (
-                <span
-                  className="badge rounded-pill bg-danger-subtle text-danger fw-semibold"
-                  style={{ fontSize: '0.72rem', padding: '0.2em 0.55em' }}
-                >
-                  {qtdAlertas}
-                </span>
-              )}
-            </button>
-          </nav>
+          {/* Linha inferior: navegação por rotas */}
+          <NavBar qtdAlertas={qtdAlertas} />
         </div>
       </header>
 
       {/* Conteúdo */}
       <main className="container py-4 flex-grow-1">
-        {abaAtiva === 'ao-vivo' && <PainelAoVivo />}
-        {abaAtiva === 'relatorios' && <GraficosHistorico tema={tema} />}
-        {abaAtiva === 'ocorrencias' && <TabelaManutencoes />}
+        <Routes>
+          <Route path="/" element={<PainelAoVivo />} />
+          <Route path="/analise" element={<GraficosHistorico tema={tema} />} />
+          <Route path="/ocorrencias" element={<TabelaManutencoes aoAlterarAlertas={verificarStatusSistema} />} />
+          <Route path="/usuarios" element={<GestaoUsuarios />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
     </div>
   );

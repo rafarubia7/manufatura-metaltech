@@ -101,8 +101,17 @@ body {
   border-color: var(--border-subtle) !important;
 }
 
-/* Navegação limpa por abas */
+/* Navegação limpa por abas (rotas) */
+.nav-abas {
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+
 .tab-nav-item {
+  text-decoration: none;
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;

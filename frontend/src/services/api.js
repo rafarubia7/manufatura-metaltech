@@ -6,6 +6,7 @@ const BASE_URL = `${API_URL}/api/v1`;
 
 const extrairLista = (payload) => {
   if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.conteudo)) return payload.conteudo;
   if (Array.isArray(payload?.content)) return payload.content;
   if (Array.isArray(payload?.itens)) return payload.itens;
   if (Array.isArray(payload?.dados)) return payload.dados;
@@ -36,6 +37,10 @@ const normalizarEstatisticas = (payload = {}) => ({
   medianaNivel: Number(payload.medianaNivelReservatorio ?? payload.medianaNivel ?? 0),
   minimoNivel: Number(payload.minimoNivelReservatorio ?? payload.minimoNivel ?? 0),
   maximoNivel: Number(payload.maximoNivelReservatorio ?? payload.maximoNivel ?? 0),
+  desvioPadraoNivel: Number(payload.desvioPadraoNivelReservatorio ?? 0),
+  quartil1Nivel: Number(payload.quartil1NivelReservatorio ?? 0),
+  quartil3Nivel: Number(payload.quartil3NivelReservatorio ?? 0),
+  totalLeituras: Number(payload.totalLeituras ?? 0),
   percentualPorTipoPeca: payload.percentualPorTipoPeca ?? {},
   alertasAtivos: payload.alertasAtivos ?? 0,
   periodoInicio: payload.periodoInicio ?? null,
@@ -78,5 +83,49 @@ export const resolverAlerta = async (id) => {
 
   const texto = await resposta.text();
   return texto ? JSON.parse(texto) : null;
+};
+
+// Lança um Error com a mensagem da API (ex.: "E-mail já cadastrado") para exibir na tela.
+const verificarResposta = async (resposta, mensagemPadrao) => {
+  if (resposta.ok) return;
+  let mensagem = mensagemPadrao;
+  try {
+    const erro = await resposta.json();
+    mensagem = erro.detalhes?.length ? erro.detalhes.join('; ') : erro.mensagem || mensagemPadrao;
+  } catch {
+    // corpo vazio ou não JSON: mantém a mensagem padrão
+  }
+  throw new Error(mensagem);
+};
+
+export const listarUsuarios = async () => {
+  const resposta = await fetch(`${BASE_URL}/usuarios`);
+  await verificarResposta(resposta, 'Erro ao buscar usuários');
+  return resposta.json();
+};
+
+export const criarUsuario = async (usuario) => {
+  const resposta = await fetch(`${BASE_URL}/usuarios`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(usuario),
+  });
+  await verificarResposta(resposta, 'Erro ao cadastrar usuário');
+  return resposta.json();
+};
+
+export const atualizarUsuario = async (id, usuario) => {
+  const resposta = await fetch(`${BASE_URL}/usuarios/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(usuario),
+  });
+  await verificarResposta(resposta, 'Erro ao atualizar usuário');
+  return resposta.json();
+};
+
+export const excluirUsuario = async (id) => {
+  const resposta = await fetch(`${BASE_URL}/usuarios/${id}`, { method: 'DELETE' });
+  await verificarResposta(resposta, 'Erro ao excluir usuário');
 };
 
