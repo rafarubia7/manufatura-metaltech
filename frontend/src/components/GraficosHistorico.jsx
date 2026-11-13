@@ -35,9 +35,6 @@ function GraficosHistorico({ tema = 'light' }) {
     color: isDark ? '#f8fafc' : '#0f172a',
   };
 
-  useEffect(() => {
-    carregarDados();
-  }, []);
 
   const carregarDados = async () => {
     try {
@@ -59,10 +56,7 @@ function GraficosHistorico({ tema = 'light' }) {
       const leiturasFormatadas = listaBruta
         .map((l) => ({
           hora: l.timestamp
-            ? new Date(l.timestamp).toLocaleTimeString('pt-BR', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })
+            ? new Date(l.timestamp).toLocaleTimeString('pt-BR')
             : '',
           nivel: Number(
             (l.nivelReservatorio?.percentual ?? l.nivelReservatorioPercentual ?? 0).toFixed(1)
@@ -78,6 +72,12 @@ function GraficosHistorico({ tema = 'light' }) {
       setCarregando(false);
     }
   };
+
+  useEffect(() => {
+    carregarDados();
+    const intervalo = setInterval(carregarDados, 10000);
+    return () => clearInterval(intervalo);
+  }, []);
 
   if (carregando) {
     return <div className="text-theme-secondary py-5 text-center">Carregando análise histórica...</div>;
@@ -99,17 +99,25 @@ function GraficosHistorico({ tema = 'light' }) {
       quantidade: estatisticas?.totalDesconhecidas ?? estatisticas?.totalPorTipo?.DESCONHECIDA ?? 0,
       cor: '#f59e0b',
     },
-    {
-      nome: 'Conflito',
-      quantidade: estatisticas?.totalAmbas ?? estatisticas?.totalPorTipo?.AMBAS ?? 0,
-      cor: '#ef4444',
-    },
   ];
 
-  const media = estatisticas?.mediaNivelReservatorio ?? estatisticas?.mediaNivel ?? 0;
-  const mediana = estatisticas?.medianaNivelReservatorio ?? 0;
-  const minimo = estatisticas?.minimoNivelReservatorio ?? 0;
-  const maximo = estatisticas?.maximoNivelReservatorio ?? 0;
+  // buscarEstatisticas() já normaliza os nomes (mediaNivel, medianaNivel, ...).
+  const media = estatisticas?.mediaNivel ?? 0;
+  const mediana = estatisticas?.medianaNivel ?? 0;
+  const minimo = estatisticas?.minimoNivel ?? 0;
+  const maximo = estatisticas?.maximoNivel ?? 0;
+  const desvioPadrao = estatisticas?.desvioPadraoNivel ?? 0;
+  const quartil1 = estatisticas?.quartil1Nivel ?? 0;
+  const quartil3 = estatisticas?.quartil3Nivel ?? 0;
+
+  const indicadores = [
+    { rotulo: 'Mediana', valor: mediana },
+    { rotulo: 'Desvio padrão', valor: desvioPadrao },
+    { rotulo: 'Mínimo', valor: minimo },
+    { rotulo: 'Máximo', valor: maximo },
+    { rotulo: '1º quartil', valor: quartil1 },
+    { rotulo: '3º quartil', valor: quartil3 },
+  ];
 
   return (
     <div className="d-flex flex-column gap-4">
@@ -235,31 +243,20 @@ function GraficosHistorico({ tema = 'light' }) {
             </div>
 
             <div className="row g-2 pt-3 border-top border-theme-subtle">
-              <div className="col-4">
-                <span className="text-theme-secondary d-block" style={{ fontSize: '0.75rem' }}>
-                  Mediana
-                </span>
-                <span className="fw-semibold num-tabular text-theme-primary">
-                  {Number(mediana).toFixed(1)}%
-                </span>
-              </div>
-              <div className="col-4">
-                <span className="text-theme-secondary d-block" style={{ fontSize: '0.75rem' }}>
-                  Mínimo
-                </span>
-                <span className="fw-semibold num-tabular text-theme-primary">
-                  {Number(minimo).toFixed(1)}%
-                </span>
-              </div>
-              <div className="col-4">
-                <span className="text-theme-secondary d-block" style={{ fontSize: '0.75rem' }}>
-                  Máximo
-                </span>
-                <span className="fw-semibold num-tabular text-theme-primary">
-                  {Number(maximo).toFixed(1)}%
-                </span>
-              </div>
+              {indicadores.map((item) => (
+                <div className="col-4" key={item.rotulo}>
+                  <span className="text-theme-secondary d-block" style={{ fontSize: '0.75rem' }}>
+                    {item.rotulo}
+                  </span>
+                  <span className="fw-semibold num-tabular text-theme-primary">
+                    {Number(item.valor).toFixed(1)}%
+                  </span>
+                </div>
+              ))}
             </div>
+            <small className="text-theme-muted d-block mt-3" style={{ fontSize: '0.75rem' }}>
+              Critério de alerta da Ciência de Dados: enchimento acima de 5 %/min na janela de 3 min.
+            </small>
           </div>
         </div>
       </div>

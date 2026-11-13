@@ -2,14 +2,24 @@
 import React, { useEffect, useState } from 'react';
 import { buscarAlertas, resolverAlerta } from '../services/api';
 
-function TabelaManutencoes() {
+const TIPOS_ALERTA = {
+  RESERVATORIO_CRITICO: { label: 'Reservatório crítico', classe: 'bg-danger-subtle text-danger' },
+  RESERVATORIO_ALTO: { label: 'Reservatório alto', classe: 'bg-warning-subtle text-warning-emphasis' },
+  RESERVATORIO_BAIXO: { label: 'Reservatório baixo', classe: 'bg-info-subtle text-info-emphasis' },
+  ENCHIMENTO_RAPIDO: { label: 'Enchimento rápido', classe: 'bg-warning-subtle text-warning-emphasis' },
+  CONTAGEM_ANOMALA: { label: 'Conflito de sensores', classe: 'bg-secondary-subtle text-secondary-emphasis' },
+};
+
+const formatarTipoAlerta = (tipo) =>
+  TIPOS_ALERTA[tipo] || { label: tipo || 'Alerta', classe: 'bg-secondary-subtle text-secondary-emphasis' };
+
+const formatarDataHora = (valor) => (valor ? new Date(valor).toLocaleString('pt-BR') : '—');
+
+function TabelaManutencoes({ aoAlterarAlertas }) {
   const [alertas, setAlertas] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [feedback, setFeedback] = useState('');
 
-  useEffect(() => {
-    carregarAlertas();
-  }, []);
 
   const carregarAlertas = async () => {
     try {
@@ -22,11 +32,16 @@ function TabelaManutencoes() {
     }
   };
 
+  useEffect(() => {
+    carregarAlertas();
+  }, []);
+
   const handleResolver = async (id) => {
     try {
       await resolverAlerta(id);
       setFeedback(`Ocorrência #${id} marcada como resolvida.`);
       carregarAlertas();
+      aoAlterarAlertas?.(); // atualiza o contador do cabeçalho na hora
       setTimeout(() => setFeedback(''), 3000);
     } catch (err) {
       console.error('Erro ao resolver alerta:', err);
@@ -92,17 +107,17 @@ function TabelaManutencoes() {
               </tr>
             </thead>
             <tbody>
-              {alertas.map((alerta) => (
+              {alertas.map((alerta) => {
+                const tipo = formatarTipoAlerta(alerta.tipoAlerta);
+                return (
                 <tr key={alerta.id}>
                   <td className="font-mono-tech text-theme-secondary">#{alerta.id}</td>
-                  <td className="font-mono-tech text-theme-secondary">
-                    {alerta.dataHora || alerta.timestamp
-                      ? new Date(alerta.dataHora || alerta.timestamp).toLocaleString('pt-BR')
-                      : 'N/A'}
+                  <td className="font-mono-tech text-theme-secondary text-nowrap">
+                    {formatarDataHora(alerta.dataHoraAlerta)}
                   </td>
                   <td>
-                    <span className="badge bg-warning-subtle text-warning-emphasis fw-medium">
-                      {alerta.tipoAlerta || alerta.tipo || 'ALERTA'}
+                    <span className={`badge fw-medium ${tipo.classe}`} title={alerta.tipoAlerta}>
+                      {tipo.label}
                     </span>
                   </td>
                   <td className="text-theme-primary">{alerta.mensagem}</td>
@@ -125,7 +140,8 @@ function TabelaManutencoes() {
                     )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
