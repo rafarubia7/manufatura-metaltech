@@ -25,3 +25,6 @@ Thumbs.db
 # Documentos locais
 plano_acao_tecnico.md
 projeto_interdisciplinar.md
+
+# Configuração local do gateway (use automacao/config.example.json como modelo)
+automacao/config.json

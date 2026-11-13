@@ -19,6 +19,9 @@ public interface AlertaNivelRepository extends JpaRepository<AlertaNivel, Long> 
     @Query("SELECT COUNT(a) FROM AlertaNivel a WHERE a.resolvido = false")
     long contarNaoResolvidos();
 
+    @Query("SELECT DISTINCT a.tipoAlerta FROM AlertaNivel a WHERE a.resolvido = false")
+    List<TipoAlerta> listarTiposNaoResolvidos();
+
     @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END FROM AlertaNivel a "
             + "WHERE a.tipoAlerta = :tipo AND a.resolvido = false AND a.leitura.dispositivoId = :dispositivoId")
     boolean existeAtivo(@Param("tipo") TipoAlerta tipo, @Param("dispositivoId") String dispositivoId);

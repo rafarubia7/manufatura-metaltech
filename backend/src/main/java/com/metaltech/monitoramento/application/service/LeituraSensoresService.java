@@ -49,7 +49,8 @@ public class LeituraSensoresService {
 
     /**
      * O status é sempre recalculado pelo percentual. Alertas de reservatório são únicos por tipo
-     * e dispositivo e se resolvem quando a condição muda; cada conflito AMBAS gera um alerta.
+     * e dispositivo e se resolvem quando a condição muda. Indutivo + capacitivo é peça metálica
+     * (ver {@link ClassificadorPeca}), então não há mais alerta de conflito de sensores.
      */
     @Transactional
     public LeituraSensores salvarLeitura(LeituraSensores leitura) {
@@ -64,11 +65,6 @@ public class LeituraSensoresService {
         }
 
         avaliarEnchimentoRapido(leitura);
-
-        if (leitura.getTipoPeca() == TipoPeca.AMBAS) {
-            leitura.adicionarAlerta(criarAlerta(leitura, TipoAlerta.CONTAGEM_ANOMALA,
-                    "Conflito de sensores: indutivo e capacitivo detectaram a mesma peça"));
-        }
 
         return leituraRepository.save(leitura);
     }

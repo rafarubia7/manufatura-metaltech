@@ -1,98 +1,82 @@
-# Roadmap do Projeto MetalTech
+# Plano de Entrega — MetalTech
 
-## 1. Visão geral
+Checklist de fechamento do projeto, seguindo o documento oficial ([projeto.md](projeto.md)). Cada item cita a seção que o exige. Situação em **12/11/2026**.
 
-Este documento consolida o estado atual da etapa de desenvolvimento, os principais pontos pendentes e a ordem correta para completar o projeto sem dispersão.
+Legenda: ✅ pronto · ⏳ depende da equipe · ⚠️ pronto com ressalva
 
-## 2. Estado atual
+## 1. Entregáveis (seção 7)
 
-### Concluído
-- Base do backend em Java/Spring Boot funcional
-- API REST com endpoints principais operacionais
-- Persistência com MySQL e Flyway
-- Geração de alertas e estatísticas de negócio
-- Testes automatizados do backend executando
-- Gateway IO-Link lendo os sensores reais e enviando à API
-- Dashboard web consumindo a API
-- Pipeline de dados sintéticos em Python e relatório de Ciência de Dados
-- Validação da integração CIDA → API
+| Entregável | Situação | Onde |
+|---|---|---|
+| Repositório Git com back-end e front-end | ✅ (falta organizar os commits, ver seção 4) | `backend/`, `frontend/` |
+| Firmware da camada de Automação | ✅ | `automacao/gateway.py` + [documentacao_circuito.md](documentacao_circuito.md) |
+| Aplicativo de Realidade Aumentada | ⏳ a ser anexado e integrado | consome `GET /api/v1/esteira/status` |
+| Relatório de Ciência de Dados | ✅ | [relatorio_ciencia_dados.md](relatorio_ciencia_dados.md) |
+| Documento de arquitetura de nuvem | ✅ | [arquitetura_nuvem.md](arquitetura_nuvem.md) |
+| Apresentação final | ⏳ | roteiro na seção 3 |
 
-### Em andamento
-- refinamento final da documentação
-- padronização de ambiente e instruções de execução
-- organização da estrutura do repositório
-- preparação para a próxima etapa: front-end e entrega final
+## 2. Requisitos por unidade curricular (seções 5 e 8)
 
-### Pendente
-- calibração do nível do reservatório no gateway
-- comparar a análise sintética com leituras reais do gateway
-- deploy e nuvem
-- autenticação/segurança
-- observabilidade
-- adaptação da CIDA para dados reais industriais
+### Automação Industrial (5.1)
+- ✅ Sensores de distância, indutivo e capacitivo lidos pelo mestre IO-Link
+- ✅ Classificação metálica / não metálica combinando indutivo e capacitivo
+- ✅ Envio HTTP para o back-end, com fila e reenvio se a API cair
+- ✅ Documentação do circuito (modelos lidos do equipamento)
+- ⚠️ **Confiabilidade do nível:** a porta X01 (O5D150) falha com `code 530` e o nível pula entre 0% e 95%. É um problema físico. Alinhe o sensor, revise o cabo e recalibre `vazio_raw`/`cheio_raw` (ver [documentacao_circuito.md](documentacao_circuito.md), seção 5). **Resolver antes da apresentação.** Hoje o ruído gera alertas falsos de enchimento rápido.
 
-## 3. Objetivo da fase atual
+### Ciência de Dados (5.2)
+- ✅ Média, mediana, **moda**, desvio padrão e quartis do nível
+- ✅ Estatística descritiva da contagem de peças por tipo (peças por hora de metálicas e não metálicas)
+- ✅ Gráficos de linha, barras, dispersão, histograma e boxplot
+- ✅ Outliers e critério de alerta (enchimento > 5 %/min), implementado no back-end
+- Opcional: rodar `analise_estatistica.py --fonte api` com as leituras reais, depois que o sensor de distância estiver estável
 
-Fechar a base funcional e deixar o projeto pronto para as próximas frentes sem ambiguidade, inconsistência de documentação ou dependência de contexto informal.
+### Computação em Nuvem (5.3)
+- ✅ Modelo de serviço justificado (PaaS), segurança, disponibilidade, escalabilidade e custos
+- ⏳ **Hospedagem real:** o critério de avaliação inclui a "disponibilidade do serviço hospedado". Siga o passo a passo da seção 8 de [arquitetura_nuvem.md](arquitetura_nuvem.md) com a conta de nuvem da equipe. Sem conta, apresente a arquitetura e rode localmente com `docker compose up -d --build`.
 
-## 4. Ordem recomendada de execução
+### Desenvolvimento Back-end (5.4)
+- ✅ Orientação a objetos:
+  - herança e polimorfismo em `Sensor` → `SensorIndutivo`/`SensorCapacitivo`;
+  - encapsulamento em `Usuario` e `LeituraSensores`.
+- ✅ Esteira, leituras, peças classificadas e **usuários** representados no modelo
+- ✅ CRUD com banco: leituras (`/leituras`) e usuários (`/usuarios`), com migrations Flyway V1–V3
+- ✅ Endpoints documentados: Swagger e [contrato_api.md](contrato_api.md)
+- ✅ 72 testes automatizados, 90,8% de cobertura de linhas, teste com MySQL real e health check (`/actuator/health`)
 
-### Fase 1 — Alinhar a base de execução
-1. confirmar JDK 17
-2. iniciar MySQL via Docker
-3. validar que o backend sobe
-4. confirmar Swagger e endpoints
-5. validar `docker-compose.yml` e a URL de conexão
+### Realidade Aumentada (5.5)
+- ✅ Back-end pronto: o `/esteira/status` traz contagens por tipo, nível, status e `exibirAlerta`. O `exibirAlerta` fica ligado com o reservatório alto ou crítico, **ou** quando o enchimento está fora do padrão da CIDA.
+- ⏳ App: reconhecer o marcador, mostrar contagem metálica/não metálica e nível, e destacar quando `exibirAlerta = true`
 
-### Fase 2 — Alinhar documentação e onboarding
-1. revisar README
-2. revisar guia de execução
-3. revisar guia do front-end
-4. remover trechos antigos com PostgreSQL no fluxo principal
-5. definir um único padrão para uso local e rede
+### Frameworks Front-end (5.6)
+- ✅ Consome a API em tempo quase real (polling de 4 s e 10 s)
+- ✅ Gráficos e indicadores da CIDA (média, mediana, desvio, quartis, critério de alerta)
+- ✅ Responsivo, com componentes, props e estado, e **rotas** (React Router)
+- ✅ Framework CSS (Bootstrap 5)
 
-### Fase 3 — Revisão da estrutura do repositório
-1. separar documentação ativa de histórico
-2. separar artefatos gerados de código
-3. garantir que pastas sigam nomes claros e consistentes
-4. remover ou ignorar arquivos que não devem ir para versionamento
+## 3. Roteiro sugerido da apresentação (fluxo da seção 6)
 
-### Fase 4 — Validar CIDA, gateway e API
-1. validar geração do dataset
-2. validar análise estatística
-3. validar envio para API e a leitura real dos sensores (`gateway.py --sondar`)
-4. confirmar que os resultados são coerentes com a regra de negócio
+1. **Problema:** contagem manual na esteira (1 min).
+2. **Automação:** passar peças reais e mostrar o log do gateway (`classificada: METALICA ...`).
+3. **Back-end:** Swagger, `POST` recebido, classificação e alertas recalculados, testes e cobertura.
+4. **Nuvem:** diagrama e justificativa do PaaS. Se estiver hospedado, mostrar a URL pública.
+5. **Ciência de Dados:** gráficos do relatório e critério de 5 %/min, que vira o alerta "Enchimento rápido".
+6. **Front-end:** dashboard atualizando sozinho enquanto as peças passam. Mostrar as 4 rotas.
+7. **RA:** apontar para o marcador e mostrar os mesmos números e o alerta.
+8. **Demonstração de robustez:** derrubar a API por alguns segundos, passar peças, subir a API de novo e mostrar que nada se perdeu.
 
-### Fase 5 — Preparar a próxima etapa
-1. front-end/dashboard
-2. integrações de operação e visualização
-3. instruções para rede e autenticação
-4. planejamento de deploy e nuvem
+## 4. Fechamento do repositório
 
-## 5. Critérios de sucesso da fase atual
+1. Com a API parada, rodar `cd backend; .\mvnw.cmd clean verify`. Precisa terminar em `BUILD SUCCESS`.
+2. Rodar `cd frontend; npm run lint; npm run build`.
+3. Organizar os commits por área (back-end, front-end, automação, CIDA, documentação) e criar a branch/tag de entrega.
+4. Antes da apresentação, opcional: limpar o banco de testes para começar a demonstração do zero (`docker compose down -v` e `docker compose up -d mysql` apagam **todos** os dados).
 
-- Backend funcional em ambiente local com MySQL
-- README e guias consistentes com o projeto real
-- API documentada e integrada ao processo de operação
-- CIDA validada com dados sintéticos e gateway enviando leituras reais para a API
-- Repositório organizado e pronto para continuidade
+## 5. Riscos
 
-## 6. Riscos principais
-
-- divergência entre documentação e configuração real
-- uso de `localhost` no front-end quando a aplicação está em outra máquina
-- banco e schema sem alinhamento documental claro
-- mistura de artefatos gerados e arquivos de origem
-- calibração do nível do reservatório ainda pendente
-
-## 7. Próximo passo imediato
-
-Antes de iniciar o desenvolvimento do front-end, a equipe deve:
-
-1. fechar documentação
-2. validar backend
-3. validar pipeline CIDA e o gateway
-4. confirmar URL de acesso em rede local
-5. preparar interface seguindo o contrato da API
-
-Esse é o caminho mais seguro e com menor risco para a etapa seguinte.
+| Risco | Impacto | Mitigação |
+|---|---|---|
+| Sensor de distância instável (`code 530`) | Nível errado e alertas falsos na demonstração | Recalibrar e alinhar antes. Em último caso, demonstrar o nível com o dataset da CIDA |
+| Rede do laboratório (mestre em 10.110.12.41) | Gateway sem dados | Testar `--sondar` antes de começar |
+| RA entregue sem testar com a API | Integração falha ao vivo | Testar contra o `/esteira/status` real pelo menos 1 dia antes |
+| Sem conta de nuvem | Critério de "serviço hospedado" incompleto | Mostrar a arquitetura e o `docker compose` com a mesma imagem que iria para a nuvem |

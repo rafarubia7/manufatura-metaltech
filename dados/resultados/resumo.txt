@@ -3,7 +3,11 @@ Período: 2026-11-02T00:01:56-03:00 a 2026-11-08T23:58:41-03:00 (7.0 dias)
 Leituras: 9965
 
 Nível do reservatório (%)
-  média 48.771 | mediana 47.94 | desvio 23.638 | Q1 28.8 | Q3 68.0 | mín 0.37 | máx 100.0
+  média 48.771 | mediana 47.94 | moda 27.0 | desvio 23.638 | Q1 28.8 | Q3 68.0 | mín 0.37 | máx 100.0
+
+Peças por hora, por tipo
+  METALICA: média 35.708 | mediana 37.5 | moda 42.0 | desvio 14.068 | Q1 24.0 | Q3 47.0
+  NAO_METALICA: média 19.661 | mediana 19.0 | moda 13.0 | desvio 8.611 | Q1 13.0 | Q3 25.0
 
 Tipos de peça: METALICA 60.2%, NAO_METALICA 33.15%, DESCONHECIDA 6.15%, AMBAS 0.5%
 Status (% do tempo): ALERTA_BAIXO 14.44%, NORMAL 75.15%, ALERTA_ALTO 8.48%, CRITICO 1.93%

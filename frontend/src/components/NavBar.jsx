@@ -1,35 +1,35 @@
 // src/components/NavBar.jsx
 import React from 'react';
+import { NavLink } from 'react-router-dom';
 
-function NavBar({ setTelaAtiva, telaAtiva, pendingAlerts = 0 }) {
-  const tabs = [
-    { key: 'aoVivo', label: 'Monitoramento ao Vivo' },
-    { key: 'relatorios', label: 'Relatórios de Produção' },
-    { key: 'historico', label: 'Histórico de Ocorrências' },
-  ];
+const ROTAS = [
+  { caminho: '/', rotulo: 'Monitoramento' },
+  { caminho: '/analise', rotulo: 'Análise e Histórico' },
+  { caminho: '/ocorrencias', rotulo: 'Ocorrências', mostraAlertas: true },
+  { caminho: '/usuarios', rotulo: 'Usuários' },
+];
 
+function NavBar({ qtdAlertas = 0 }) {
   return (
-    <nav className="navbar navbar-expand-lg">
-      <div className="container-fluid">
-        <div className="navbar-nav">
-          {tabs.map((tab) => {
-            const isActive = telaAtiva === tab.key;
-            const hasPending = tab.key === 'historico' && pendingAlerts > 0;
-
-            return (
-              <button
-                key={tab.key}
-                className={`nav-link btn btn-link ${isActive ? 'active' : ''}`}
-                onClick={() => setTelaAtiva(tab.key)}
-                type="button"
-              >
-                <span>{tab.label}</span>
-                {hasPending && <span className="alert-count">{pendingAlerts}</span>}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+    <nav className="nav-abas mt-1" aria-label="Seções do dashboard">
+      {ROTAS.map((rota) => (
+        <NavLink
+          key={rota.caminho}
+          to={rota.caminho}
+          end={rota.caminho === '/'}
+          className={({ isActive }) => `tab-nav-item ${isActive ? 'active' : ''}`}
+        >
+          <span>{rota.rotulo}</span>
+          {rota.mostraAlertas && qtdAlertas > 0 && (
+            <span
+              className="badge rounded-pill bg-danger-subtle text-danger fw-semibold"
+              style={{ fontSize: '0.72rem', padding: '0.2em 0.55em' }}
+            >
+              {qtdAlertas}
+            </span>
+          )}
+        </NavLink>
+      ))}
     </nav>
   );
 }

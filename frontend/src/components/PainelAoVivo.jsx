@@ -7,11 +7,6 @@ function PainelAoVivo() {
   const [ultimasLeituras, setUltimasLeituras] = useState([]);
   const [carregando, setCarregando] = useState(true);
 
-  useEffect(() => {
-    carregarDados();
-    const intervalo = setInterval(carregarDados, 4000);
-    return () => clearInterval(intervalo);
-  }, []);
 
   const carregarDados = async () => {
     try {
@@ -40,6 +35,12 @@ function PainelAoVivo() {
     }
   };
 
+  useEffect(() => {
+    carregarDados();
+    const intervalo = setInterval(carregarDados, 4000);
+    return () => clearInterval(intervalo);
+  }, []);
+
   if (carregando && !estatisticas) {
     return <div className="text-theme-secondary py-5 text-center">Carregando telemetria...</div>;
   }
@@ -48,11 +49,11 @@ function PainelAoVivo() {
   const naoMetalicas = estatisticas?.totalNaoMetalicas ?? estatisticas?.totalPorTipo?.NAO_METALICA ?? 0;
   const desconhecidas = estatisticas?.totalDesconhecidas ?? estatisticas?.totalPorTipo?.DESCONHECIDA ?? 0;
   const ambas = estatisticas?.totalAmbas ?? estatisticas?.totalPorTipo?.AMBAS ?? 0;
+  const alertasAtivos = Number(estatisticas?.alertasAtivos ?? 0);
 
   const pctMetalica = estatisticas?.percentualPorTipoPeca?.METALICA ?? 0;
   const pctNaoMetalica = estatisticas?.percentualPorTipoPeca?.NAO_METALICA ?? 0;
   const pctDesconhecida = estatisticas?.percentualPorTipoPeca?.DESCONHECIDA ?? 0;
-  const pctAmbas = estatisticas?.percentualPorTipoPeca?.AMBAS ?? 0;
 
   const leituraMaisRecente = ultimasLeituras[0];
   const nivelAtual =
@@ -142,12 +143,13 @@ function PainelAoVivo() {
         <div className="col-6 col-lg-3">
           <div className="surface-card p-3 p-md-4 h-100">
             <div className="kpi-label">
-              <span>Conflito (Ambas)</span>
-              <span className="font-mono-tech text-theme-secondary">{pctAmbas.toFixed(1)}%</span>
+              <span>Ocorrências ativas</span>
             </div>
-            <div className="kpi-value num-tabular">{ambas.toLocaleString('pt-BR')}</div>
+            <div className={`kpi-value num-tabular ${alertasAtivos > 0 ? 'text-danger' : ''}`}>
+              {alertasAtivos.toLocaleString('pt-BR')}
+            </div>
             <div className="text-theme-muted mt-2" style={{ fontSize: '0.78rem' }}>
-              Leitura simultânea
+              {alertasAtivos > 0 ? 'Veja a aba Ocorrências' : 'Nenhuma pendência'}
             </div>
           </div>
         </div>
@@ -269,7 +271,7 @@ function PainelAoVivo() {
                           </td>
                           <td className="num-tabular fw-medium">{Number(pct).toFixed(1)}%</td>
                           <td className="font-mono-tech text-theme-muted">
-                            {item.dispositivoId || 'ESP32-001'}
+                            {item.dispositivoId || '—'}
                           </td>
                         </tr>
                       );

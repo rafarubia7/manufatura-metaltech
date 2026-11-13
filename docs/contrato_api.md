@@ -15,8 +15,10 @@ Documentação interativa: `/swagger-ui.html`.
 |---|---|---|
 | sim | não | `METALICA` |
 | não | sim | `NAO_METALICA` |
-| sim | sim | `AMBAS` (conflito, gera alerta) |
+| sim | sim | `METALICA` (o capacitivo também reage a metal; o indutivo decide) |
 | não | não | `DESCONHECIDA` |
+
+- `AMBAS` continua no enum só por compatibilidade com dados antigos: o back-end não gera mais esse tipo (a migration `V2` reclassificou as leituras antigas).
 
 - O `tipo` e o `status` enviados pelo dispositivo são **informativos**: o back-end recalcula e registra divergência no log.
 - `percentual` (0 a 100) é calculado pelo dispositivo; o back-end confia nele.
@@ -55,17 +57,33 @@ Resposta `201` com a leitura persistida (campo `id`) e a lista `alertas` gerados
 | PUT | `/leituras/alertas/{id}/resolver` | Resolver alerta (operador) |
 | GET | `/leituras/estatisticas` | Indicadores; aceita `inicio` e `fim` juntos |
 | GET | `/esteira/status` | **Estado atual** para dashboard e RA |
+| GET | `/usuarios` | Listar usuários (ordem alfabética) |
+| GET | `/usuarios/{id}` | Buscar usuário |
+| POST | `/usuarios` | Cadastrar usuário |
+| PUT | `/usuarios/{id}` | Atualizar usuário (e ativar/desativar) |
+| DELETE | `/usuarios/{id}` | Excluir usuário |
+
+Corpo de `POST`/`PUT /usuarios`:
+
+```json
+{ "nome": "Ana Souza", "email": "ana@metaltech.com", "perfil": "OPERADOR", "ativo": true }
+```
+
+- O `email` é único e gravado em minúsculas. Repetido → 400 `REQUISICAO_INVALIDA`.
+- O `ativo` é opcional e só vale no `PUT` (nulo = não muda).
+- A resposta inclui `id`, `criadoEm` e as permissões derivadas do perfil (`podeResolverAlertas`, `podeGerenciarUsuarios`). Usuário inativo perde as permissões.
 
 ## 4. Enums
 
 - `TipoPeca`: `METALICA`, `NAO_METALICA`, `DESCONHECIDA`, `AMBAS`.
 - `StatusReservatorio`: `NORMAL`, `ALERTA_BAIXO` (< 20%), `ALERTA_ALTO` (> 80%), `CRITICO` (>= 95%).
 - `TipoAlerta`: `RESERVATORIO_BAIXO`, `RESERVATORIO_ALTO`, `RESERVATORIO_CRITICO`, `CONTAGEM_ANOMALA`, `ENCHIMENTO_RAPIDO`.
+- `PerfilUsuario`: `ADMINISTRADOR` (resolve alertas e gerencia usuários), `OPERADOR` (resolve alertas), `VISUALIZADOR` (só consulta).
 
 ## 5. Critérios de alerta
 
 - Nível: um alerta ativo por tipo e dispositivo; resolvido sozinho quando o status muda.
-- Conflito de sensores (`AMBAS`): um alerta por ocorrência.
+- Conflito de sensores: não gera mais alerta, porque indutivo + capacitivo é peça metálica. `CONTAGEM_ANOMALA` fica no enum só por causa do histórico.
 - Enchimento rápido: taxa acima de **5 %/min**, medida entre a leitura atual e a primeira leitura dos 3 minutos anteriores (mínimo de 1 minuto entre elas). Um alerta por episódio. Critério definido pela CIDA.
 
 ## 6. Erros

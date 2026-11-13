@@ -117,12 +117,12 @@ class LeituraSensoresServiceTest {
     }
 
     @Test
-    void deveGerarAlertaDeConflitoParaPecaAmbas() {
+    void naoDeveGerarAlertaQuandoIndutivoECapacitivoDisparamJuntos() {
+        // o capacitivo também reage a metal: é peça metálica, não conflito
         LeituraSensores salva = leituraService.salvarLeitura(leitura(TipoPeca.AMBAS, 50.0, StatusReservatorio.NORMAL));
 
-        assertThat(salva.getAlertas())
-                .extracting(AlertaNivel::getTipoAlerta)
-                .containsExactly(TipoAlerta.CONTAGEM_ANOMALA);
+        assertThat(salva.getTipoPeca()).isEqualTo(TipoPeca.METALICA);
+        assertThat(salva.getAlertas()).isEmpty();
     }
 
     @Test

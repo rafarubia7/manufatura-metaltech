@@ -92,11 +92,12 @@ def nivel_percentual(raw, vazio_raw, cheio_raw):
 
 
 def status_nivel(pct, cfg_nivel):
-    """Nomes devem ser exatamente os do enum StatusReservatorio do backend."""
+    """Nomes devem ser exatamente os do enum StatusReservatorio do backend (mesmas faixas:
+    critico >= limite_critico, alto > limite_atencao, baixo < limite_baixo)."""
     nomes = cfg_nivel["nomes"]
     if pct >= cfg_nivel["limite_critico"]:
         return nomes["critico"]
-    if pct >= cfg_nivel["limite_atencao"]:
+    if pct > cfg_nivel["limite_atencao"]:
         return nomes["atencao"]
     if cfg_nivel.get("limite_baixo") is not None and pct < cfg_nivel["limite_baixo"]:
         return nomes["baixo"]
@@ -143,8 +144,9 @@ class Enviador(threading.Thread):
         self.dry_run = dry_run
         self.sessao = requests.Session()
         self.headers = {"Content-Type": "application/json"}
-        if cfg.get("api_token"):
-            self.headers["Authorization"] = f"Bearer {cfg['api_token']}"
+        chave = cfg.get("api_key") or cfg.get("api_token")  # api_token: nome antigo, ainda aceito
+        if chave:
+            self.headers["X-API-Key"] = chave  # mesmo cabeçalho que o ApiKeyFilter do backend valida
 
     def run(self):
         espera = 1.0
@@ -262,12 +264,13 @@ def executar(cfg, dry_run):
         if estado == "livre" and detectando:
             estado, t_ini, ts_ini = "coletando", t0, agora_iso()
             viu_m, viu_n = ind, cap
-            log.info("peca detectada (indutivo=%s capacitivo=%s); classificando...", ind, cap)
+            log.info("peca detectada; classificando por %.1f s...", janela)
         elif estado == "coletando":
             viu_m |= ind
             viu_n |= cap
             if t0 - t_ini >= janela:
                 tipo = classificar(viu_m, viu_n)
+                log.info("classificada: %s (na janela: indutivo=%s capacitivo=%s)", tipo, viu_m, viu_n)
                 enfileirar(montar_payload(cfg, ts_ini, tipo, dist_cm, viu_m, viu_n, pct))
                 ultimo_envio = t0
                 estado = "aguardando"
