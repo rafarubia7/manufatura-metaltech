@@ -92,12 +92,15 @@ O dataset está consistente com o contrato da API e com as regras de domínio do
 |---|---|
 | Média | 48,77% |
 | Mediana | 47,94% |
+| Moda (valor inteiro mais frequente) | 27% (152 leituras) |
 | Desvio padrão | 23,64 p.p. |
 | Q1 / Q3 (IQR) | 28,80% / 68,00% (39,20) |
 | Mínimo / Máximo | 0,37% / 100,00% |
 | Assimetria / Curtose | 0,14 / −0,97 |
 
 Média e mediana próximas e curtose negativa indicam uma distribuição **achatada e quase simétrica**, típica de um processo de "dente de serra" que percorre toda a faixa de operação em vez de se concentrar num ponto de equilíbrio.
+
+A moda confirma isso: como o nível é contínuo, ela foi calculada sobre os valores arredondados para inteiro, e o valor mais frequente (27%, 152 leituras) quase empata com vários outros (39% com 147, 36% com 146, 38% com 142). Sem um pico claro, a moda **não é uma boa medida de tendência central para o nível**. Média e mediana descrevem melhor o reservatório.
 
 ![Histograma do nível](../dados/graficos/04_histograma_nivel.png)
 
@@ -122,6 +125,15 @@ Média e mediana próximas e curtose negativa indicam uma distribuição **achat
 | Ambas (conflito) | 50 | 0,50% |
 
 ![Proporção por tipo](../dados/graficos/07_barras_tipo_peca.png)
+
+**Contagem de peças por tipo (peças por hora, 168 horas):**
+
+| Tipo | Média | Mediana | Moda | Desvio padrão | Q1 | Q3 | Mín / Máx |
+|---|---|---|---|---|---|---|---|
+| Metálica | 35,7 | 37,5 | 42 | 14,1 | 24 | 47 | 6 / 70 |
+| Não metálica | 19,7 | 19 | 13 | 8,6 | 13 | 25 | 3 / 49 |
+
+A vazão de peças metálicas é quase o dobro da de não metálicas e tem distribuição simétrica (assimetria 0,00). A de não metálicas tem cauda à direita (assimetria 0,66): a moda (13) fica abaixo da mediana (19) porque há horas isoladas com muitas peças plásticas. Os coeficientes de variação são altos nos dois casos (39% e 44%), porque a vazão muda muito entre turnos (seção 4.5).
 
 A **acurácia de classificação** frente ao material real foi de **93,32%**. Os erros quase todos são omissões (peça não reconhecida), não trocas: só 3 peças metálicas foram classificadas como não metálicas.
 
@@ -246,6 +258,8 @@ Interpretação:
 - **RESERVATORIO_BAIXO** dispara ao fim de quase todo esvaziamento. Para um reservatório de coleta, nível baixo é o estado desejado depois da descarga, então esse alerta é **ruído operacional**. Recomenda-se rebaixá-lo para informativo ou disparar apenas se o nível ficar baixo por mais de 60 min com a esteira produzindo (sinal de falta de alimentação).
 - Os 7 alertas críticos correspondem aos 7 esvaziamentos iniciados acima de 95%. Os 3 episódios de transbordo ocorreram dentro deles.
 - **CONTAGEM_ANOMALA** gera 50 alertas a partir de apenas 2 episódios de deriva. Agrupar conflitos próximos num único alerta de "possível descalibração" reduziria a carga sobre o operador.
+
+> **Atualização após os testes com os sensores reais.** Na bancada, o capacitivo (ifm KI5309) fica sobreposto ao indutivo (ifm IF6123) e **também reage a metal**: toda peça metálica aciona os dois sensores. Por isso a regra do back-end mudou. Indutivo + capacitivo passou a ser classificado como `METALICA`, e o alerta `CONTAGEM_ANOMALA` deixou de ser gerado. Esta análise continua válida para o modelo simulado, em que `AMBAS` representa deriva do capacitivo. Com os dados reais, porém, as 50 leituras `AMBAS` seriam contadas como metálicas e a linha `CONTAGEM_ANOMALA` da tabela acima ficaria zerada. Para detectar a deriva do capacitivo com o hardware atual, seria preciso usar a intensidade do sinal, e não o acionamento.
 
 ---
 

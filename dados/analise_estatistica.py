@@ -129,11 +129,19 @@ def taxa_variacao(df: pd.DataFrame) -> pd.Series:
     return taxa.where(minutos >= 1).round(3)
 
 
-def descrever(serie: pd.Series) -> dict:
+def moda(valores: pd.Series, casas: int) -> float | None:
+    """Moda dos valores arredondados (variável contínua não tem valor repetido exato).
+    Com mais de uma moda, devolve a menor."""
+    modas = valores.round(casas).mode()
+    return None if modas.empty else round(float(modas.min()), casas)
+
+
+def descrever(serie: pd.Series, casas_moda: int = 0) -> dict:
     valores = serie.dropna()
     q1, q2, q3 = valores.quantile([0.25, 0.5, 0.75])
     return {
         "n": int(valores.size), "media": round(valores.mean(), 3), "mediana": round(q2, 3),
+        "moda": moda(valores, casas_moda),
         "desvio_padrao": round(valores.std(), 3), "minimo": round(valores.min(), 3), "q1": round(q1, 3),
         "q3": round(q3, 3), "iqr": round(q3 - q1, 3), "maximo": round(valores.max(), 3),
         "assimetria": round(float(stats.skew(valores)), 3), "curtose": round(float(stats.kurtosis(valores)), 3),
@@ -551,10 +559,16 @@ def analisar(df: pd.DataFrame, eventos: pd.DataFrame | None, gerar_figuras: bool
         },
         "nivel_reservatorio": descrever(df["nivel_reservatorio_percentual"]),
         "distancia_cm": descrever(df["distancia_cm"]),
-        "indutivo_intensidade": descrever(df["indutivo_intensidade"]),
-        "capacitivo_intensidade": descrever(df["capacitivo_intensidade"]),
-        "taxa_variacao_nivel_pct_min": descrever(df["taxa_nivel_pct_min"]),
+        "indutivo_intensidade": descrever(df["indutivo_intensidade"], casas_moda=2),
+        "capacitivo_intensidade": descrever(df["capacitivo_intensidade"], casas_moda=2),
+        "taxa_variacao_nivel_pct_min": descrever(df["taxa_nivel_pct_min"], casas_moda=1),
         "pecas_por_hora": descrever(vazao_hora["pecas"]),
+        # Contagem de peças por tipo, por hora: base da estatística descritiva pedida por tipo de peça.
+        "pecas_por_hora_por_tipo": {
+            t: descrever(df.loc[df["tipo_peca"] == t].set_index("timestamp").resample("1h").size()
+                         .reindex(vazao_hora.index, fill_value=0))
+            for t in ("METALICA", "NAO_METALICA")
+        },
         "tipo_peca": {t: {"quantidade": int((df["tipo_peca"] == t).sum()),
                           "percentual": round(100 * (df["tipo_peca"] == t).mean(), 2)} for t in ORDEM_TIPOS},
         "status_reservatorio": status,
@@ -604,8 +618,12 @@ def escrever_resumo(r: dict) -> str:
         f"Leituras: {r['total_leituras']}",
         "",
         "Nível do reservatório (%)",
-        f"  média {nivel['media']} | mediana {nivel['mediana']} | desvio {nivel['desvio_padrao']} | Q1 {nivel['q1']} | "
-        f"Q3 {nivel['q3']} | mín {nivel['minimo']} | máx {nivel['maximo']}",
+        f"  média {nivel['media']} | mediana {nivel['mediana']} | moda {nivel['moda']} | desvio {nivel['desvio_padrao']} | "
+        f"Q1 {nivel['q1']} | Q3 {nivel['q3']} | mín {nivel['minimo']} | máx {nivel['maximo']}",
+        "",
+        "Peças por hora, por tipo",
+        *(f"  {t}: média {v['media']} | mediana {v['mediana']} | moda {v['moda']} | desvio {v['desvio_padrao']} | "
+          f"Q1 {v['q1']} | Q3 {v['q3']}" for t, v in r["pecas_por_hora_por_tipo"].items()),
         "",
         "Tipos de peça: " + ", ".join(f"{k} {v['percentual']}%" for k, v in r["tipo_peca"].items()),
         "Status (% do tempo): " + ", ".join(f"{k} {v['percentual_tempo']}%" for k, v in r["status_reservatorio"].items()),
