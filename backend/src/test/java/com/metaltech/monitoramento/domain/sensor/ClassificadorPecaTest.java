@@ -26,8 +26,9 @@ class ClassificadorPecaTest {
     }
 
     @Test
-    void deveClassificarAmbasQuandoOsDoisSensoresDisparam() {
-        assertThat(classificar(true, true)).isEqualTo(TipoPeca.AMBAS);
+    void deveClassificarMetalicaQuandoOsDoisSensoresDisparam() {
+        // o capacitivo também reage a metal; o indutivo decide
+        assertThat(classificar(true, true)).isEqualTo(TipoPeca.METALICA);
     }
 
     @Test

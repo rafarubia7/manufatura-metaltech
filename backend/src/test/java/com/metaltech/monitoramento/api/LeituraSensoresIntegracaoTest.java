@@ -111,13 +111,13 @@ class LeituraSensoresIntegracaoTest {
     }
 
     @Test
-    void deveGerarAlertaParaCadaConflitoDeSensores() throws Exception {
-        postar(corpoJson(0, "AMBAS", 50.0, "NORMAL"));
-        postar(corpoJson(1, "AMBAS", 50.5, "NORMAL"));
+    void deveTratarIndutivoECapacitivoJuntosComoMetalicaSemAlerta() throws Exception {
+        // o capacitivo também reage a metal: os dois sensores juntos não são conflito
+        JsonNode resposta = postar(corpoJson(0, "AMBAS", 50.0, "NORMAL"));
 
+        assertThat(resposta.at("/peca/tipo").asText()).isEqualTo("METALICA");
         mockMvc.perform(get("/api/v1/leituras/alertas"))
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[0].tipoAlerta").value("CONTAGEM_ANOMALA"));
+                .andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Test
@@ -143,17 +143,16 @@ class LeituraSensoresIntegracaoTest {
         mockMvc.perform(get("/api/v1/leituras/estatisticas"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalLeituras").value(4))
-                .andExpect(jsonPath("$.totalMetalicas").value(2))
-                .andExpect(jsonPath("$.percentualPorTipoPeca.METALICA").value(50.0))
+                .andExpect(jsonPath("$.totalMetalicas").value(3))
+                .andExpect(jsonPath("$.percentualPorTipoPeca.METALICA").value(75.0))
                 .andExpect(jsonPath("$.mediaNivelReservatorio").value(51.25))
                 .andExpect(jsonPath("$.medianaNivelReservatorio").value(45.0))
                 .andExpect(jsonPath("$.quartil1NivelReservatorio").value(37.5))
                 .andExpect(jsonPath("$.quartil3NivelReservatorio").value(58.75))
                 .andExpect(jsonPath("$.distribuicaoStatusReservatorio.ALERTA_ALTO.quantidade").value(1))
                 .andExpect(jsonPath("$.alertasPorTipo.RESERVATORIO_ALTO").value(1))
-                .andExpect(jsonPath("$.alertasPorTipo.CONTAGEM_ANOMALA").value(1))
                 .andExpect(jsonPath("$.alertasPorTipo.ENCHIMENTO_RAPIDO").value(1))
-                .andExpect(jsonPath("$.alertasAtivos").value(3));
+                .andExpect(jsonPath("$.alertasAtivos").value(2));
     }
 
     @Test
