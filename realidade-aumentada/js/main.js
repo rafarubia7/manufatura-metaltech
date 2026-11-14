@@ -14,6 +14,8 @@ const el = {
   nivelBarraContainer: document.getElementById("nivel-barra-container"),
   nivelBarra: document.getElementById("nivel-barra"),
   nivelAlerta: document.getElementById("nivel-alerta"),
+  faixaEnchimento: document.getElementById("faixa-enchimento"),
+  atualizadoHa: document.getElementById("atualizado-ha"),
 };
 
 const TEXTO_PROCURANDO = "Aponte a câmera para a esteira…";
@@ -22,15 +24,42 @@ let temporizador = null;
 let alvoVisivel = false;
 let alvosVisiveis = 0;       // quantos alvos (fotos da esteira) estão na câmera
 let temporizadorPerda = null; // espera antes de esconder os painéis
+let temporizadorRelogio = null; // atualiza o "Atualizado há X s" a cada 1 s
+let ultimaLeitura = null;       // instante (ms) da última leitura recebida
 
 // Deixa claro quando os dados são fictícios
 el.selo.hidden = !MODO_TESTE;
 
-// verde < 70%, amarelo 70–89%, vermelho >= 90%
-function classificarNivel(nivel) {
-  if (nivel >= 90) return { classe: "nivel-critico", texto: "Crítico: esvaziar o reservatório" };
-  if (nivel >= 70) return { classe: "nivel-atencao", texto: "Atenção: reservatório enchendo" };
-  return { classe: "nivel-normal", texto: "Normal" };
+// Cor e texto conforme o status recebido (limiares em js/config.js)
+const SITUACOES = {
+  CRITICO: { classe: "nivel-critico", texto: "Crítico: esvaziar o reservatório" },
+  ALERTA_ALTO: { classe: "nivel-atencao", texto: "Atenção: perto da capacidade" },
+  NORMAL: { classe: "nivel-normal", texto: "Normal" },
+  ALERTA_BAIXO: { classe: "nivel-normal", texto: "Normal (nível baixo)" },
+};
+
+function classificarNivel(status) {
+  return SITUACOES[status] || SITUACOES.NORMAL;
+}
+
+// "Atualizado agora" (< 2 s) ou "Atualizado há X s"
+function mostrarTempoDesdeLeitura() {
+  if (ultimaLeitura === null) return;
+  const segundos = Math.max(0, Math.floor((Date.now() - ultimaLeitura) / 1000));
+  el.atualizadoHa.textContent = segundos < 2 ? "Atualizado agora" : "Atualizado há " + segundos + " s";
+}
+
+function iniciarRelogio() {
+  pararRelogio();
+  mostrarTempoDesdeLeitura();
+  temporizadorRelogio = setInterval(mostrarTempoDesdeLeitura, 1000);
+}
+
+function pararRelogio() {
+  if (temporizadorRelogio) {
+    clearInterval(temporizadorRelogio);
+    temporizadorRelogio = null;
+  }
 }
 
 function mostrarStatus(texto, ehErro) {
@@ -46,13 +75,22 @@ function mostrarDados(dados) {
   el.total.textContent = total.toLocaleString("pt-BR");
 
   const nivel = Math.min(100, Math.max(0, dados.nivelReservatorio));
-  const situacao = classificarNivel(nivel);
+  const situacao = classificarNivel(dados.status);
   el.nivelValor.textContent = nivel.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
   el.nivelBarra.style.width = nivel + "%";
   el.nivelBarraContainer.setAttribute("aria-valuenow", String(nivel));
   el.nivelAlerta.textContent = situacao.texto;
   el.cardNivel.classList.remove("nivel-normal", "nivel-atencao", "nivel-critico");
   el.cardNivel.classList.add(situacao.classe);
+
+  // Faixa "fora do padrão": só enquanto a leitura indicar enchimento rápido
+  const enchimentoRapido = dados.exibirAlerta === true &&
+    Array.isArray(dados.motivos) && dados.motivos.includes("ENCHIMENTO_RAPIDO");
+  el.faixaEnchimento.hidden = !enchimentoRapido;
+
+  const instante = Date.parse(dados.ultimaLeitura);
+  ultimaLeitura = Number.isNaN(instante) ? Date.now() : instante;
+  mostrarTempoDesdeLeitura();
 }
 
 async function atualizarDados() {
@@ -72,6 +110,7 @@ function iniciarAtualizacao() {
   pararAtualizacao();
   atualizarDados();
   temporizador = setInterval(atualizarDados, INTERVALO_MS);
+  iniciarRelogio();
 }
 
 function pararAtualizacao() {
@@ -79,6 +118,7 @@ function pararAtualizacao() {
     clearInterval(temporizador);
     temporizador = null;
   }
+  pararRelogio();
 }
 
 // Esteira reconhecida: mostra os painéis e começa a atualizar
