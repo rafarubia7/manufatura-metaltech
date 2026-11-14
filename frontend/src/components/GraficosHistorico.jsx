@@ -15,6 +15,17 @@ import {
 } from 'recharts';
 import { buscarLeituras, buscarEstatisticas } from '../services/api';
 
+const QTD_LEITURAS_GRAFICO = 25;
+
+const formatarMomento = (valor, comSegundos) =>
+  new Date(valor).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    ...(comSegundos ? { second: '2-digit' } : {}),
+  });
+
 function GraficosHistorico({ tema = 'light' }) {
   const [leituras, setLeituras] = useState([]);
   const [estatisticas, setEstatisticas] = useState(null);
@@ -39,7 +50,7 @@ function GraficosHistorico({ tema = 'light' }) {
   const carregarDados = async () => {
     try {
       const [dadosLeituras, dadosEstatisticas] = await Promise.all([
-        buscarLeituras(0, 25),
+        buscarLeituras(0, QTD_LEITURAS_GRAFICO),
         buscarEstatisticas(),
       ]);
 
@@ -54,10 +65,11 @@ function GraficosHistorico({ tema = 'light' }) {
         : [];
 
       const leiturasFormatadas = listaBruta
+        .filter((l) => l.timestamp)
         .map((l) => ({
-          hora: l.timestamp
-            ? new Date(l.timestamp).toLocaleTimeString('pt-BR')
-            : '',
+          // Rótulo com data: leituras de dias diferentes não parecem fora de ordem.
+          momento: formatarMomento(l.timestamp, true),
+          eixo: formatarMomento(l.timestamp, false),
           nivel: Number(
             (l.nivelReservatorio?.percentual ?? l.nivelReservatorioPercentual ?? 0).toFixed(1)
           ),
@@ -90,7 +102,7 @@ function GraficosHistorico({ tema = 'light' }) {
       cor: '#3b82f6',
     },
     {
-      nome: 'Plástica',
+      nome: 'Não metálica',
       quantidade: estatisticas?.totalNaoMetalicas ?? estatisticas?.totalPorTipo?.NAO_METALICA ?? 0,
       cor: '#14b8a6',
     },
@@ -99,7 +111,7 @@ function GraficosHistorico({ tema = 'light' }) {
       quantidade: estatisticas?.totalDesconhecidas ?? estatisticas?.totalPorTipo?.DESCONHECIDA ?? 0,
       cor: '#f59e0b',
     },
-  ];
+  ].filter((item) => item.nome !== 'Desconhecida' || item.quantidade > 0);
 
   // buscarEstatisticas() já normaliza os nomes (mediaNivel, medianaNivel, ...).
   const media = estatisticas?.mediaNivel ?? 0;
@@ -126,7 +138,7 @@ function GraficosHistorico({ tema = 'light' }) {
           <div>
             <h6 className="mb-0 fw-semibold text-theme-primary">Evolução do Nível do Reservatório</h6>
             <small className="text-theme-secondary" style={{ fontSize: '0.8rem' }}>
-              Comportamento percentual nas últimas leituras registradas
+              Percentual nas últimas {QTD_LEITURAS_GRAFICO} leituras registradas
             </small>
           </div>
           <div className="d-flex align-items-center gap-3" style={{ fontSize: '0.78rem' }}>
@@ -152,9 +164,10 @@ function GraficosHistorico({ tema = 'light' }) {
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
               <XAxis
-                dataKey="hora"
+                dataKey="eixo"
                 axisLine={false}
                 tickLine={false}
+                minTickGap={56}
                 tick={{ fill: tickColor, fontSize: 12 }}
               />
               <YAxis
@@ -163,7 +176,12 @@ function GraficosHistorico({ tema = 'light' }) {
                 tickLine={false}
                 tick={{ fill: tickColor, fontSize: 12 }}
               />
-              <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                itemStyle={tooltipItemStyle}
+                labelFormatter={(_, itens) => itens?.[0]?.payload?.momento ?? ''}
+                formatter={(valor) => [`${valor}%`, 'Nível']}
+              />
               <ReferenceLine y={80} stroke="#f59e0b" strokeDasharray="4 4" />
               <ReferenceLine y={95} stroke="#ef4444" strokeDasharray="4 4" />
               <Area
