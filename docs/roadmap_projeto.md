@@ -33,7 +33,8 @@ Legenda: ✅ pronto · ⏳ depende da equipe · ⚠️ pronto com ressalva
 
 ### Computação em Nuvem (5.3)
 - ✅ Modelo de serviço justificado (PaaS), segurança, disponibilidade, escalabilidade e custos
-- ⏳ **Hospedagem real:** o critério de avaliação inclui a "disponibilidade do serviço hospedado". Siga o passo a passo da seção 8 de [arquitetura_nuvem.md](arquitetura_nuvem.md) com a conta de nuvem da equipe. Sem conta, apresente a arquitetura e rode localmente com `docker compose up -d --build`.
+- ✅ **Serviço hospedado:** a plataforma roda num servidor local da rede do laboratório com Docker Compose (db, backend, frontend e gateway, com healthchecks, `restart: unless-stopped` e volume persistente). Ver a seção 2 de [arquitetura_nuvem.md](arquitetura_nuvem.md).
+- ℹ️ **Nuvem pública:** a AWS (PaaS) fica como arquitetura proposta para produção (seção 3), sem hospedagem contratada nesta entrega.
 
 ### Desenvolvimento Back-end (5.4)
 - ✅ Orientação a objetos:
@@ -59,7 +60,7 @@ Legenda: ✅ pronto · ⏳ depende da equipe · ⚠️ pronto com ressalva
 1. **Problema:** contagem manual na esteira (1 min).
 2. **Automação:** passar peças reais e mostrar o log do gateway (`classificada: METALICA ...`).
 3. **Back-end:** Swagger, `POST` recebido, classificação e alertas recalculados, testes e cobertura.
-4. **Nuvem:** diagrama e justificativa do PaaS. Se estiver hospedado, mostrar a URL pública.
+4. **Nuvem:** mostrar o servidor local em operação (`docker compose ps` com tudo `healthy`, dashboard aberto pelo IP do servidor em outro aparelho) e depois o diagrama e a justificativa da arquitetura AWS proposta para produção.
 5. **Ciência de Dados:** gráficos do relatório e critério de 5 %/min, que vira o alerta "Enchimento rápido".
 6. **Front-end:** dashboard atualizando sozinho enquanto as peças passam. Mostrar as 4 rotas.
 7. **RA:** apontar para o marcador e mostrar os mesmos números e o alerta.
@@ -79,4 +80,4 @@ Legenda: ✅ pronto · ⏳ depende da equipe · ⚠️ pronto com ressalva
 | Sensor de distância instável (`code 530`) | Nível errado e alertas falsos na demonstração | Recalibrar e alinhar antes. Em último caso, demonstrar o nível com o dataset da CIDA |
 | Rede do laboratório (mestre em 10.110.12.41) | Gateway sem dados | Testar `--sondar` antes de começar |
 | RA entregue sem testar com a API | Integração falha ao vivo | Testar contra o `/esteira/status` real pelo menos 1 dia antes |
-| Sem conta de nuvem | Critério de "serviço hospedado" incompleto | Mostrar a arquitetura e o `docker compose` com a mesma imagem que iria para a nuvem |
+| Servidor local único | Se o PC do servidor desligar, a plataforma para | Deixar o servidor ligado na demonstração, fazer backup (`mysqldump`, seção 2.4 de arquitetura_nuvem.md) e apresentar a AWS como evolução para alta disponibilidade |

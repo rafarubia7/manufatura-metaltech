@@ -4,7 +4,7 @@
 #   Tudo em contêiner:                          docker compose up -d --build
 #   Somente o banco (back-end rodando via mvnw): docker compose up -d db
 #
-# Endereços no host: dashboard http://localhost:3000 | API http://localhost:8080 | MySQL localhost:3307
+# Endereços: dashboard http://<ip-do-servidor>:3000 | API http://<ip-do-servidor>:8080 | MySQL 127.0.0.1:3307 (só no servidor)
 services:
   db:
     image: mysql:8.0
@@ -17,7 +17,8 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no arquivo .env}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no arquivo .env}
     ports:
-      - "3307:3306"   # 3307 no host para não conflitar com um MySQL local
+      # Só no próprio servidor (Workbench local); outras máquinas da rede não alcançam o banco
+      - "127.0.0.1:3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql                                   # persistência dos dados
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro      # roda só com o volume vazio
@@ -49,6 +50,12 @@ services:
       - "8080:8080"
     networks:
       - rede_interna
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
 
   frontend:
     build: ./frontend
@@ -61,6 +68,11 @@ services:
       - "3000:80"   # dashboard em http://localhost:3000 (chama a API em :8080 no mesmo host)
     networks:
       - rede_interna
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   # Gateway IO-Link (automacao/): lê os sensores no mestre IO-Link da rede local e
   # envia as leituras para a API. Só sobe com o profile "esteira":
@@ -75,7 +87,7 @@ services:
     restart: unless-stopped
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy   # só começa a enviar com a API pronta
     environment:
       # Sobrepõem o config.json: dentro da rede do compose a API é "backend"
       GATEWAY_API_URL: http://backend:8080/api/v1/leituras
