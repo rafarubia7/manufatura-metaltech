@@ -41,7 +41,7 @@ flowchart LR
 - **Front-end:** React 19, React Router 7, Bootstrap 5, Recharts, Vite
 - **Automação:** Python 3, mestre IO-Link ifm AL1300 (HTTP/JSON)
 - **Ciência de Dados:** Python 3.11+, pandas, numpy, scipy, matplotlib
-- **Infra local:** Docker Compose (`compose.yaml`: MySQL, API e dashboard em contêineres, rede interna e volume `mysql_data`)
+- **Infra local:** Docker Compose (`compose.yaml`: MySQL, API e dashboard em contêineres, rede interna e volume `mysql_data`; gateway e Ciência de Dados como serviços opcionais)
 
 ## Estrutura do repositório
 
@@ -133,6 +133,18 @@ docker compose ps
 - MySQL: `localhost:3307`
 
 Os dados ficam no volume `mysql_data` e sobrevivem a `docker compose down`; `docker compose down -v` apaga o banco.
+
+Serviços opcionais (profiles):
+
+```powershell
+# Gateway IO-Link: exige automacao/config.json e a rede do mestre IO-Link
+docker compose --profile esteira up -d --build
+docker compose logs -f gateway
+
+# Ciência de Dados, sob demanda (gráficos e resultados saem em dados/)
+docker compose run --rm dados
+docker compose run --rm dados analise_estatistica.py --fonte api --url http://backend:8080
+```
 
 ### 4. Gateway IO-Link (dados reais)
 

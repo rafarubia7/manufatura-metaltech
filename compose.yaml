@@ -62,6 +62,46 @@ services:
     networks:
       - rede_interna
 
+  # Gateway IO-Link (automacao/): lê os sensores no mestre IO-Link da rede local e
+  # envia as leituras para a API. Só sobe com o profile "esteira":
+  #   docker compose --profile esteira up -d --build
+  # (ou COMPOSE_PROFILES=esteira no .env do servidor do laboratório).
+  # Exige automacao/config.json (copie de automacao/config.example.json).
+  gateway:
+    profiles: ["esteira"]
+    build: ./automacao
+    image: metaltech-gateway
+    container_name: metaltech-gateway
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    environment:
+      # Sobrepõem o config.json: dentro da rede do compose a API é "backend"
+      GATEWAY_API_URL: http://backend:8080/api/v1/leituras
+      GATEWAY_API_KEY: ${API_KEY:-}
+      GATEWAY_MESTRE_URL: ${GATEWAY_MESTRE_URL:-}   # vazio = usa o mestre_url do config.json
+    volumes:
+      - ./automacao/config.json:/config/config.json:ro
+    networks:
+      - rede_interna
+
+  # Ciência de Dados (dados/): scripts rodados sob demanda, não fica no ar.
+  #   docker compose run --rm dados                                    # análise sobre o CSV
+  #   docker compose run --rm dados analise_estatistica.py --fonte api --url http://backend:8080
+  # Gráficos e resultados aparecem direto em dados/graficos e dados/resultados no host.
+  dados:
+    profiles: ["dados"]
+    build: ./dados
+    image: metaltech-dados
+    container_name: metaltech-dados
+    environment:
+      METALTECH_API_KEY: ${API_KEY:-}
+    volumes:
+      - ./dados:/app/dados
+    networks:
+      - rede_interna
+
 volumes:
   mysql_data:
 

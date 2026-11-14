@@ -13,6 +13,7 @@ import argparse
 import http.client
 import json
 import logging
+import os
 import queue
 import statistics
 import threading
@@ -320,6 +321,16 @@ def sondar(cfg, continuo=False):
             return
 
 
+def aplicar_variaveis_ambiente(cfg):
+    """Variáveis de ambiente preenchidas têm prioridade sobre o config.json.
+    No Docker (compose.yaml) a API é http://backend:8080, e não localhost."""
+    for variavel, chave in (("GATEWAY_API_URL", "api_url"), ("GATEWAY_API_KEY", "api_key"),
+                            ("GATEWAY_MESTRE_URL", "mestre_url")):
+        valor = os.environ.get(variavel, "").strip()
+        if valor:
+            cfg[chave] = valor
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--config", default="config.json")
@@ -330,6 +341,7 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     with open(args.config, encoding="utf-8") as f:
         cfg = json.load(f)
+    aplicar_variaveis_ambiente(cfg)
     if args.sondar:
         try:
             sondar(cfg, args.continuo)
