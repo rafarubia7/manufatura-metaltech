@@ -17,13 +17,13 @@ import { buscarLeituras, buscarEstatisticas } from '../services/api';
 
 const QTD_LEITURAS_GRAFICO = 25;
 
-const formatarMomento = (valor, comSegundos) =>
+const formatarMomento = (valor) =>
   new Date(valor).toLocaleString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-    ...(comSegundos ? { second: '2-digit' } : {}),
+    second: '2-digit',
   });
 
 function GraficosHistorico({ tema = 'light' }) {
@@ -67,9 +67,9 @@ function GraficosHistorico({ tema = 'light' }) {
       const leiturasFormatadas = listaBruta
         .filter((l) => l.timestamp)
         .map((l) => ({
-          // Rótulo com data: leituras de dias diferentes não parecem fora de ordem.
-          momento: formatarMomento(l.timestamp, true),
-          eixo: formatarMomento(l.timestamp, false),
+          // Data e segundos: leituras de dias diferentes não parecem fora de ordem
+          // e leituras do mesmo minuto não repetem o rótulo.
+          momento: formatarMomento(l.timestamp),
           nivel: Number(
             (l.nivelReservatorio?.percentual ?? l.nivelReservatorioPercentual ?? 0).toFixed(1)
           ),
@@ -164,10 +164,10 @@ function GraficosHistorico({ tema = 'light' }) {
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
               <XAxis
-                dataKey="eixo"
+                dataKey="momento"
                 axisLine={false}
                 tickLine={false}
-                minTickGap={56}
+                minTickGap={64}
                 tick={{ fill: tickColor, fontSize: 12 }}
               />
               <YAxis
@@ -244,7 +244,7 @@ function GraficosHistorico({ tema = 'light' }) {
             <div>
               <h6 className="mb-0 fw-semibold text-theme-primary">Resumo do Reservatório</h6>
               <small className="text-theme-secondary" style={{ fontSize: '0.8rem' }}>
-                Indicadores estatísticos do período ativo
+                Indicadores estatísticos de todas as leituras gravadas
               </small>
 
               <div className="my-4">
