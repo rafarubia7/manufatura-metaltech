@@ -34,6 +34,9 @@ function TabelaManutencoes({ aoAlterarAlertas }) {
 
   useEffect(() => {
     carregarAlertas();
+    // Mantém a tabela em sincronia com o contador do cabeçalho.
+    const intervalo = setInterval(carregarAlertas, 10000);
+    return () => clearInterval(intervalo);
   }, []);
 
   const handleResolver = async (id) => {
@@ -63,6 +66,7 @@ function TabelaManutencoes({ aoAlterarAlertas }) {
         </div>
 
         <button
+          type="button"
           className="theme-toggle-btn px-3"
           onClick={carregarAlertas}
         >
@@ -131,6 +135,7 @@ function TabelaManutencoes({ aoAlterarAlertas }) {
                   <td className="text-end">
                     {!alerta.resolvido && (
                       <button
+                        type="button"
                         className="btn btn-sm btn-primary fw-medium px-3"
                         style={{ borderRadius: '7px', fontSize: '0.8rem' }}
                         onClick={() => handleResolver(alerta.id)}
