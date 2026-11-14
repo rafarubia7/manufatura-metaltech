@@ -1,71 +1,90 @@
 // =============================================================
-// ATENÇÃO: DADOS SIMULADOS (FICTÍCIOS) — APENAS PARA TESTE!
+// ATENÇÃO: DADOS SIMULADOS (FICTÍCIOS) — APENAS PARA DEMONSTRAÇÃO!
 // -------------------------------------------------------------
-// Enquanto MODO_TESTE = true (js/config.js), os números abaixo
-// são inventados aleatoriamente e NÃO vêm da esteira real.
-//
-// Para usar a API real:
-//   1. Coloque o endereço em API_URL (js/config.js)
-//   2. Mude MODO_TESTE para false
-// A função obterDados() deve sempre devolver este formato:
-//   { metalicas: 42, naoMetalicas: 17, nivelReservatorio: 78.5 }
+// Os números abaixo são gerados aleatoriamente e NÃO vêm da
+// esteira real. obterDados() sempre devolve este formato:
+//   {
+//     metalicas: 42,
+//     naoMetalicas: 17,
+//     nivelReservatorio: 78.5,
+//     status: "ALERTA_BAIXO" | "NORMAL" | "ALERTA_ALTO" | "CRITICO",
+//     exibirAlerta: false,
+//     motivos: [],                 // ou ["ENCHIMENTO_RAPIDO"]
+//     ultimaLeitura: "2026-11-13T12:00:00.000Z"
+//   }
+// Os limiares ficam em js/config.js.
 // =============================================================
 
-// Estado da simulação (só usado no modo teste)
-const simulacao = {
-  metalicas: 0,
-  naoMetalicas: 0,
-  nivelReservatorio: 20,
-};
+const NIVEL_ESVAZIAR = 97;   // acima disso o reservatório "esvazia"
+const NIVEL_REINICIO = 20;   // nível aproximado depois de esvaziar
 
 function numeroAleatorio(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// Gera dados fictícios: as contagens sobem um pouco a cada chamada
-// e o reservatório vai enchendo até ser "esvaziado".
+function decimalAleatorio(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+function arredondar(valor) {
+  return Math.round(valor * 10) / 10;
+}
+
+// Estado da simulação, mantido entre as chamadas
+const simulacao = {
+  metalicas: 0,
+  naoMetalicas: 0,
+  nivelReservatorio: NIVEL_REINICIO,
+  atualizacoesAteSalto: numeroAleatorio(8, 10),
+};
+
+function calcularStatus(nivel) {
+  if (nivel >= LIMITE_CRITICO) return "CRITICO";
+  if (nivel >= LIMITE_ALERTA_ALTO) return "ALERTA_ALTO";
+  if (nivel < LIMITE_ALERTA_BAIXO) return "ALERTA_BAIXO";
+  return "NORMAL";
+}
+
+// Gera a próxima leitura fictícia: contagens só crescem, o nível sobe
+// devagar e, a cada 8 a 10 atualizações, dá um salto acima do padrão.
 function gerarDadosSimulados() {
   simulacao.metalicas += numeroAleatorio(0, 4);
   simulacao.naoMetalicas += numeroAleatorio(0, 3);
-  simulacao.nivelReservatorio += Math.random() * 9;
 
-  if (simulacao.nivelReservatorio > 100) {
-    simulacao.nivelReservatorio = numeroAleatorio(5, 25); // esvaziou
+  const nivelAnterior = simulacao.nivelReservatorio;
+  let nivel;
+
+  if (nivelAnterior > NIVEL_ESVAZIAR) {
+    // esvaziou: recomeça perto de 20%
+    nivel = NIVEL_REINICIO + decimalAleatorio(-2, 2);
+  } else {
+    simulacao.atualizacoesAteSalto--;
+    if (simulacao.atualizacoesAteSalto <= 0) {
+      nivel = nivelAnterior + SALTO_ENCHIMENTO_RAPIDO + decimalAleatorio(1, 3);
+      simulacao.atualizacoesAteSalto = numeroAleatorio(8, 10);
+    } else {
+      nivel = nivelAnterior + decimalAleatorio(0.5, 2);
+    }
   }
+
+  nivel = Math.min(100, arredondar(nivel));
+  simulacao.nivelReservatorio = nivel;
+
+  const enchimentoRapido = nivel - nivelAnterior > SALTO_ENCHIMENTO_RAPIDO;
+  const motivos = enchimentoRapido ? ["ENCHIMENTO_RAPIDO"] : [];
 
   return {
     metalicas: simulacao.metalicas,
     naoMetalicas: simulacao.naoMetalicas,
-    nivelReservatorio: Math.round(simulacao.nivelReservatorio * 10) / 10,
+    nivelReservatorio: nivel,
+    status: calcularStatus(nivel),
+    exibirAlerta: motivos.length > 0,
+    motivos: motivos,
+    ultimaLeitura: new Date().toISOString(),
   };
 }
 
-// Busca os dados da esteira.
-// Retorna uma Promise com { metalicas, naoMetalicas, nivelReservatorio }.
-// Em caso de falha na API, lança Error("Sem conexão com a API").
+// Retorna uma Promise com a leitura simulada (formato descrito acima).
 async function obterDados() {
-  if (MODO_TESTE) {
-    return gerarDadosSimulados();
-  }
-
-  try {
-    if (!API_URL) {
-      throw new Error("API_URL não configurada");
-    }
-
-    const resposta = await fetch(API_URL, { cache: "no-store" });
-    if (!resposta.ok) {
-      throw new Error("HTTP " + resposta.status);
-    }
-
-    const json = await resposta.json();
-    return {
-      metalicas: Number(json.metalicas) || 0,
-      naoMetalicas: Number(json.naoMetalicas) || 0,
-      nivelReservatorio: Number(json.nivelReservatorio) || 0,
-    };
-  } catch (erro) {
-    console.error("Erro ao buscar dados da API:", erro);
-    throw new Error("Sem conexão com a API");
-  }
+  return gerarDadosSimulados();
 }
