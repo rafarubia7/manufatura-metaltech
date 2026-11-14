@@ -83,6 +83,24 @@ python .\gateway.py --dry-run
 python .\gateway.py
 ```
 
+## Rodando em contêiner (Docker)
+
+No servidor do laboratório, o gateway pode rodar como o serviço `gateway` do `compose.yaml` da raiz (profile `esteira`), usando o mesmo `config.json`:
+
+```powershell
+# na raiz do repositório, com automacao/config.json criado
+docker compose --profile esteira up -d --build
+docker compose logs -f gateway
+```
+
+Variáveis de ambiente preenchidas têm prioridade sobre o `config.json` (o compose já define as duas primeiras):
+
+| Variável | Substitui | No compose |
+|---|---|---|
+| `GATEWAY_API_URL` | `api_url` | `http://backend:8080/api/v1/leituras` |
+| `GATEWAY_API_KEY` | `api_key` | `API_KEY` do `.env` |
+| `GATEWAY_MESTRE_URL` | `mestre_url` | `GATEWAY_MESTRE_URL` do `.env` (vazio = usa o arquivo) |
+
 ## Estrutura de configuração
 
 Exemplo de configuração mínima:

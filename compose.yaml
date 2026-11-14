@@ -1,0 +1,122 @@
+# Stack completa do MetalTech: MySQL + API REST (Spring Boot) + dashboard (React/Nginx).
+# As credenciais vêm do arquivo .env na raiz (copie de .env.example).
+#
+#   Tudo em contêiner:                          docker compose up -d --build
+#   Somente o banco (back-end rodando via mvnw): docker compose up -d db
+#
+# Endereços: dashboard http://<ip-do-servidor>:3000 | API http://<ip-do-servidor>:8080 | MySQL 127.0.0.1:3307 (só no servidor)
+services:
+  db:
+    image: mysql:8.0
+    container_name: metaltech-db
+    restart: unless-stopped
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci", "--default-time-zone=+00:00"]
+    environment:
+      MYSQL_DATABASE: metaltech
+      MYSQL_USER: ${MYSQL_USER:-metaltech}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no arquivo .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no arquivo .env}
+    ports:
+      # Só no próprio servidor (Workbench local); outras máquinas da rede não alcançam o banco
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql                                   # persistência dos dados
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro      # roda só com o volume vazio
+    networks:
+      - rede_interna
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u $$MYSQL_USER --password=$$MYSQL_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  backend:
+    build: ./backend
+    image: metaltech-backend
+    container_name: metaltech-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy   # só sobe quando o MySQL aceita conexões
+    environment:
+      # "db" é o nome do serviço: resolvido pela rede interna do compose
+      DB_URL: jdbc:mysql://db:3306/metaltech?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USERNAME: ${MYSQL_USER:-metaltech}
+      DB_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no arquivo .env}
+      API_KEY: ${API_KEY:-}
+      CORS_ORIGENS: ${CORS_ORIGENS:-*}
+    ports:
+      - "8080:8080"
+    networks:
+      - rede_interna
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  frontend:
+    build: ./frontend
+    image: metaltech-frontend
+    container_name: metaltech-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"   # dashboard em http://localhost:3000 (chama a API em :8080 no mesmo host)
+    networks:
+      - rede_interna
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Gateway IO-Link (automacao/): lê os sensores no mestre IO-Link da rede local e
+  # envia as leituras para a API. Só sobe com o profile "esteira":
+  #   docker compose --profile esteira up -d --build
+  # (ou COMPOSE_PROFILES=esteira no .env do servidor do laboratório).
+  # Exige automacao/config.json (copie de automacao/config.example.json).
+  gateway:
+    profiles: ["esteira"]
+    build: ./automacao
+    image: metaltech-gateway
+    container_name: metaltech-gateway
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy   # só começa a enviar com a API pronta
+    environment:
+      # Sobrepõem o config.json: dentro da rede do compose a API é "backend"
+      GATEWAY_API_URL: http://backend:8080/api/v1/leituras
+      GATEWAY_API_KEY: ${API_KEY:-}
+      GATEWAY_MESTRE_URL: ${GATEWAY_MESTRE_URL:-}   # vazio = usa o mestre_url do config.json
+    volumes:
+      - ./automacao/config.json:/config/config.json:ro
+    networks:
+      - rede_interna
+
+  # Ciência de Dados (dados/): scripts rodados sob demanda, não fica no ar.
+  #   docker compose run --rm dados                                    # análise sobre o CSV
+  #   docker compose run --rm dados analise_estatistica.py --fonte api --url http://backend:8080
+  # Gráficos e resultados aparecem direto em dados/graficos e dados/resultados no host.
+  dados:
+    profiles: ["dados"]
+    build: ./dados
+    image: metaltech-dados
+    container_name: metaltech-dados
+    environment:
+      METALTECH_API_KEY: ${API_KEY:-}
+    volumes:
+      - ./dados:/app/dados
+    networks:
+      - rede_interna
+
+volumes:
+  mysql_data:
+
+networks:
+  rede_interna:
+    driver: bridge

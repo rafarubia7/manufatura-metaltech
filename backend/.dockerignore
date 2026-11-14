@@ -1,0 +1,30 @@
+# Fora da imagem do back-end (o build compila tudo do zero)
+target/
+build/
+out/
+*.log
+*.class
+
+# IDE / sistema
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Git e segredos
+.git
+.gitignore
+.env
+.env.*
+
+# Python (scripts auxiliares eventualmente copiados para cá)
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Arquivos que não entram no build
+Dockerfile
+.dockerignore
+mvnw.cmd

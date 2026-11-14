@@ -1,0 +1,13 @@
+# Saídas e ambiente local não entram na imagem (no compose, a pasta é montada)
+graficos/
+resultados/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.log
+.git
+.env
+Dockerfile
+.dockerignore

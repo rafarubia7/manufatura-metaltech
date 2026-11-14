@@ -40,7 +40,7 @@ Não é preciso editar IP da API em lugar nenhum enquanto o gateway, o back-end 
 
 ### Passo 0 — Credenciais (`.env`)
 
-O `docker-compose.yml` **não sobe** sem o arquivo `.env` na raiz do repositório. O `.env.example` é só o modelo: o Docker não o lê.
+O `compose.yaml` **não sobe** sem o arquivo `.env` na raiz do repositório. O `.env.example` é só o modelo: o Docker não o lê.
 
 ```powershell
 Copy-Item .env.example .env
@@ -65,7 +65,7 @@ Esperado: **60 testes, 0 falhas**, terminando em `BUILD SUCCESS`.
 Na raiz do repositório:
 
 ```powershell
-docker compose up -d mysql
+docker compose up -d db
 docker compose ps        # repita até o status ficar "healthy"
 ```
 
@@ -99,11 +99,16 @@ $env:SERVER_PORT = "8081"
 .\mvnw.cmd spring-boot:run
 ```
 
-**Opção B, tudo em contêiner.** Esta forma lê o `.env` sozinha:
+**Opção B, tudo em contêiner.** Esta forma lê o `.env` sozinha e sobe o banco (`db`), a API (`backend`) e o dashboard (`frontend`) na rede interna `rede_interna`:
 
 ```powershell
 docker compose up -d --build
+docker compose ps -a     # db "healthy", backend e frontend "Up"
+docker compose logs -f backend
 ```
+
+- Dashboard: http://localhost:3000 (Nginx; chama a API em `:8080` no mesmo host)
+- Na primeira subida, com o volume `mysql_data` vazio, o MySQL roda o `db/init.sql` (charset `utf8mb4`). As tabelas são criadas pelo Flyway quando o back-end sobe.
 
 Verificações:
 
@@ -120,7 +125,7 @@ Variáveis de ambiente aceitas pelo back-end: `DB_URL`, `DB_USERNAME`, `DB_PASSW
 
 ```powershell
 docker compose down -v          # apaga o volume do MySQL
-docker compose up -d mysql
+docker compose up -d db
 ```
 
 ## 4. Front-end (dashboard)
@@ -199,6 +204,22 @@ Se aparecer `falha ao enviar` no gateway, a API está inacessível (back-end par
 
 > **Chave do dispositivo.** Se o back-end tiver `API_KEY` preenchida no `.env`, coloque o mesmo valor em `api_key` no `automacao/config.json`. O gateway envia a chave no cabeçalho `X-API-Key`, que é o que o back-end valida. Chave diferente ou ausente → `API recusou (401)`.
 
+### Gateway em contêiner (servidor do laboratório)
+
+Num servidor na mesma rede do mestre IO-Link, o gateway pode rodar como mais um serviço do `compose.yaml`. Ele religa sozinho se cair ou se o servidor reiniciar (`restart: unless-stopped`).
+
+```powershell
+Copy-Item automacao\config.example.json automacao\config.json   # ajuste mestre_url, portas e calibração
+docker compose --profile esteira up -d --build
+docker compose logs -f gateway
+docker compose --profile esteira run --rm gateway --sondar       # diagnóstico das portas
+```
+
+- Crie o `automacao/config.json` **antes** de subir. Se ele não existir, o Docker cria uma pasta com esse nome e o gateway não inicia. Nesse caso, apague a pasta e crie o arquivo.
+- No contêiner, o `api_url` do `config.json` é ignorado: o compose define `GATEWAY_API_URL=http://backend:8080/api/v1/leituras`. A chave vem do `API_KEY` do `.env` (`GATEWAY_API_KEY`), e o IP do mestre pode ser trocado por `GATEWAY_MESTRE_URL` no `.env`, sem mexer no arquivo.
+- Para o gateway subir sempre junto com o `docker compose up -d`, coloque `COMPOSE_PROFILES=esteira` no `.env` do servidor.
+- A fila de reenvio (até 5000 leituras) fica na memória: protege contra a API fora do ar, mas o que estiver na fila se perde se o próprio contêiner do gateway reiniciar.
+
 Mais detalhes em [automacao/README.md](../automacao/README.md).
 
 ## 6. Ciência de Dados (`dados/`)
@@ -229,6 +250,21 @@ Gera `leituras_simuladas.csv` (~10 mil leituras, 7 dias) e `eventos_simulados.cs
 ```
 
 Gera os gráficos em `dados/graficos/` e os resultados em `dados/resultados/`. A interpretação está em [relatorio_ciencia_dados.md](relatorio_ciencia_dados.md). Com `--fonte api` e o banco vazio, o script não encontra leituras: rode antes o gateway (seção 5).
+
+### Ciência de Dados em contêiner (alternativa ao `.venv`)
+
+O serviço `dados` do `compose.yaml` roda os scripts sob demanda, sem instalar Python no PC. A pasta `dados/` é montada no contêiner, então gráficos e resultados saem direto em `dados/graficos/` e `dados/resultados/` (sobrescrevendo os arquivos versionados).
+
+```powershell
+docker compose run --rm dados                                       # analise_estatistica.py sobre o CSV
+docker compose run --rm dados gerar_dataset.py
+docker compose run --rm dados analise_estatistica.py --fonte api --url http://backend:8080
+docker compose run --rm dados -m pytest                             # testes da ponte IO-Link
+```
+
+Dentro da rede do compose, a API é `http://backend:8080` (e não `localhost`). O `API_KEY` do `.env` chega ao contêiner como `METALTECH_API_KEY`.
+
+> **Limitação conhecida:** `analise_estatistica.py --fonte api` falha com `ValueError: Cannot set a DataFrame with multiple columns to the single column detectores` quando nenhuma leitura é marcada como outlier, o que acontece com poucas leituras no banco. Acontece também fora do Docker.
 
 ### Validar a API com o dataset sintético (opcional)
 
@@ -268,7 +304,7 @@ No PowerShell, `curl` é um apelido de `Invoke-WebRequest`; por isso o comando �
 | `No module named 'requests'` ao rodar o gateway | Rodou com `py`/`python` global, não com o venv | Use `.\.venv\Scripts\python gateway.py` |
 | `Python was not found` / abre a Microsoft Store | Python não instalado ou só o atalho da Store | Instale o Python (seção 1) |
 | `a execução de scripts foi desabilitada` ao ativar o venv | Política de execução do PowerShell | Não ative o venv: chame `.\.venv\Scripts\python` direto |
-| `Connection to localhost:3306 refused` | MySQL não está rodando, ou porta errada | `docker compose up -d mysql`; o host usa a porta `3307` |
+| `Connection to localhost:3306 refused` | MySQL não está rodando, ou porta errada | `docker compose up -d db`; o host usa a porta `3307` |
 | `failed to connect to the docker API` | Docker Desktop fechado | Abra o Docker Desktop e aguarde ficar pronto |
 | `Access denied for user 'metaltech'` ao subir o back-end local | A senha do `.env` não foi para a sessão, ou o volume foi criado com outra senha | Rode o carregamento do `.env` (Passo 3); se persistir, `docker compose down -v` |
 | `Access denied for user 'root'@'localhost'` | Usuário ou senha do Workbench errados | Use `root` e a senha de `MYSQL_ROOT_PASSWORD` (arquivo `.env`) |

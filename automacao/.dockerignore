@@ -1,0 +1,12 @@
+# Só gateway.py e requirements.txt entram na imagem; o config.json é montado no compose.yaml
+config.json
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.log
+.git
+.env
+Dockerfile
+.dockerignore
+README.md
