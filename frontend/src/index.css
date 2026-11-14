@@ -205,3 +205,130 @@ body {
 .table-clean tbody tr:hover {
   background-color: var(--bg-subtle);
 }
+/* Foco das abas: contorno só na navegação por teclado */
+.tab-nav-item:focus {
+  outline: none;
+}
+
+.tab-nav-item:focus-visible {
+  outline: none;
+  background-color: var(--bg-subtle);
+  border-radius: 6px 6px 0 0;
+}
+
+/* Barra de nível do reservatório com as faixas de alerta */
+.nivel-trilho {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background-color: var(--bg-subtle);
+}
+
+.nivel-preenchimento {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease, background-color 0.3s ease;
+}
+
+.nivel-marca {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background-color: var(--border-hover);
+  transform: translateX(-1px);
+}
+
+.nivel-escala {
+  position: relative;
+  height: 1.1rem;
+  margin-top: 0.35rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.nivel-escala span {
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.nivel-legenda {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem 1rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.nivel-legenda li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.nivel-legenda li span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Tela de usuários */
+.avatar-iniciais {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: var(--bg-subtle);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.acao-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  border-radius: 7px;
+  border: 1px solid var(--border-subtle);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.acao-btn:hover {
+  background-color: var(--bg-subtle);
+  border-color: var(--border-hover);
+}
+
+.acao-btn:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
+}
+
+.acao-btn.perigo {
+  color: #dc2626;
+}
+
+.acao-btn.perigo:hover {
+  background-color: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+[data-theme='dark'] .acao-btn.perigo {
+  color: #f87171;
+}
+
+.linha-editando td {
+  background-color: var(--bg-subtle) !important;
+}
+
+.linha-inativa td:not(:last-child) {
+  opacity: 0.6;
+}

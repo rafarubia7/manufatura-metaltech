@@ -2,6 +2,25 @@
 import React, { useEffect, useState } from 'react';
 import { buscarEstatisticas, buscarLeituras } from '../services/api';
 
+// Faixas do reservatório (mesmas regras do back-end).
+const LIMITES_NIVEL = [
+  { valor: 20, rotulo: '20%' },
+  { valor: 80, rotulo: '80%' },
+  { valor: 95, rotulo: '95%' },
+];
+
+// Data curta + hora: evita confundir leituras de dias diferentes.
+const formatarMomento = (valor) =>
+  valor
+    ? new Date(valor).toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+    : '—';
+
 function PainelAoVivo() {
   const [estatisticas, setEstatisticas] = useState(null);
   const [ultimasLeituras, setUltimasLeituras] = useState([]);
@@ -88,7 +107,7 @@ function PainelAoVivo() {
   const formatarTipoPeca = (tipo) => {
     const mapa = {
       METALICA: { label: 'Metálica', dot: '#3b82f6' },
-      NAO_METALICA: { label: 'Plástica', dot: '#14b8a6' },
+      NAO_METALICA: { label: 'Não metálica', dot: '#14b8a6' },
       DESCONHECIDA: { label: 'Desconhecida', dot: '#f59e0b' },
       AMBAS: { label: 'Conflito (Ambas)', dot: '#ef4444' },
     };
@@ -117,7 +136,7 @@ function PainelAoVivo() {
         <div className="col-6 col-lg-3">
           <div className="surface-card p-3 p-md-4 h-100">
             <div className="kpi-label">
-              <span>Plásticas</span>
+              <span>Não metálicas</span>
               <span className="font-mono-tech text-theme-secondary">{pctNaoMetalica.toFixed(1)}%</span>
             </div>
             <div className="kpi-value num-tabular">{naoMetalicas.toLocaleString('pt-BR')}</div>
@@ -135,7 +154,7 @@ function PainelAoVivo() {
             </div>
             <div className="kpi-value num-tabular">{desconhecidas.toLocaleString('pt-BR')}</div>
             <div className="text-theme-muted mt-2" style={{ fontSize: '0.78rem' }}>
-              Fora de alinhamento
+              Nenhum sensor acionado
             </div>
           </div>
         </div>
@@ -182,19 +201,32 @@ function PainelAoVivo() {
                 </span>
               </div>
 
-              <div
-                className="w-100 rounded-pill overflow-hidden"
-                style={{ height: '8px', backgroundColor: 'var(--bg-subtle)' }}
-              >
+              <div className="nivel-trilho" role="img" aria-label={`Nível em ${Number(nivelAtual).toFixed(1)}%`}>
                 <div
-                  className="h-100 rounded-pill"
+                  className="nivel-preenchimento"
                   style={{
                     width: `${Math.min(100, Math.max(0, nivelAtual))}%`,
                     backgroundColor: estiloNivel.barra,
-                    transition: 'width 0.4s ease, background-color 0.3s ease',
                   }}
                 />
+                {LIMITES_NIVEL.map((limite) => (
+                  <span key={limite.valor} className="nivel-marca" style={{ left: `${limite.valor}%` }} />
+                ))}
               </div>
+              <div className="nivel-escala" aria-hidden="true">
+                {LIMITES_NIVEL.map((limite) => (
+                  <span key={limite.valor} style={{ left: `${limite.valor}%` }}>
+                    {limite.rotulo}
+                  </span>
+                ))}
+              </div>
+
+              <ul className="nivel-legenda list-unstyled mb-0 mt-4">
+                <li><span style={{ backgroundColor: '#0ea5e9' }} />Baixo: abaixo de 20%</li>
+                <li><span style={{ backgroundColor: '#10b981' }} />Normal: 20% a 80%</li>
+                <li><span style={{ backgroundColor: '#f59e0b' }} />Alto: acima de 80%</li>
+                <li><span style={{ backgroundColor: '#ef4444' }} />Crítico: 95% ou mais</li>
+              </ul>
             </div>
 
             <div
@@ -229,7 +261,7 @@ function PainelAoVivo() {
               <table className="table table-clean">
                 <thead>
                   <tr>
-                    <th>Horário</th>
+                    <th>Data e hora</th>
                     <th>Classificação</th>
                     <th>Reservatório</th>
                     <th>Dispositivo</th>
@@ -251,10 +283,8 @@ function PainelAoVivo() {
 
                       return (
                         <tr key={item.id || idx}>
-                          <td className="font-mono-tech text-theme-secondary">
-                            {item.timestamp
-                              ? new Date(item.timestamp).toLocaleTimeString('pt-BR')
-                              : '--:--:--'}
+                          <td className="font-mono-tech text-theme-secondary text-nowrap">
+                            {formatarMomento(item.timestamp)}
                           </td>
                           <td>
                             <span className="d-inline-flex align-items-center gap-2 fw-medium">

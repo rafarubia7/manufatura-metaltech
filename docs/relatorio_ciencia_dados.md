@@ -293,9 +293,9 @@ A análise também roda diretamente sobre os dados persistidos (`analise_estatis
 
 ## 10. Limitações
 
-- Os dados são **sintéticos**. Os parâmetros (taxas, atrasos, alcance dos sensores) foram escolhidos para serem plausíveis, mas precisam ser recalibrados com dados reais do ESP32 quando a linha física estiver disponível.
+- Os dados são **sintéticos**. Os parâmetros (taxas, atrasos, alcance dos sensores) foram escolhidos para serem plausíveis, mas precisam ser recalibrados com dados reais do gateway IO-Link (mestre ifm AL1300) quando o sensor de distância da bancada estiver estável.
 - A avaliação dos detectores usa a verdade-terreno da própria simulação, o que tende a favorecer métodos alinhados às hipóteses do gerador.
-- Há um único dispositivo (ESP32-001) e uma única semana. Sazonalidade semanal e variação entre linhas não foram modeladas.
+- Há um único dispositivo simulado (ESP32-001) e uma única semana. Sazonalidade semanal e variação entre linhas não foram modeladas.
 - A janela de 3 min da taxa de variação introduz um pequeno atraso na detecção (visível na precisão de 79% do R2).
 
 ---

@@ -10,6 +10,26 @@ const PERFIS = {
 
 const FORM_VAZIO = { nome: '', email: '', perfil: 'OPERADOR' };
 
+const iniciais = (nome = '') =>
+  nome
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((parte) => parte[0]?.toUpperCase() ?? '')
+    .join('');
+
+const Icone = ({ caminho }) => (
+  <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+    <path strokeLinecap="round" strokeLinejoin="round" d={caminho} />
+  </svg>
+);
+
+const ICONES = {
+  editar: 'M15.2 5.2l3.6 3.6M4 20h4L19.5 8.5a2.5 2.5 0 00-3.6-3.6L4.5 16.4 4 20z',
+  ativar: 'M12 3v9m6.4-5.4a8 8 0 11-12.8 0',
+  excluir: 'M4 7h16M10 11v6m4-6v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3',
+};
+
 function GestaoUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
   const [form, setForm] = useState(FORM_VAZIO);
@@ -78,6 +98,7 @@ function GestaoUsuarios() {
         perfil: usuario.perfil,
         ativo: !usuario.ativo,
       });
+      avisar(usuario.ativo ? `${usuario.nome} foi desativado.` : `${usuario.nome} foi ativado.`);
       await carregar();
     } catch (e) {
       setErro(e.message);
@@ -195,8 +216,18 @@ function GestaoUsuarios() {
                 </thead>
                 <tbody>
                   {usuarios.map((usuario) => (
-                    <tr key={usuario.id}>
-                      <td className="fw-medium">{usuario.nome}</td>
+                    <tr
+                      key={usuario.id}
+                      className={`${editandoId === usuario.id ? 'linha-editando' : ''} ${
+                        usuario.ativo ? '' : 'linha-inativa'
+                      }`}
+                    >
+                      <td>
+                        <span className="d-inline-flex align-items-center gap-2 fw-medium">
+                          <span className="avatar-iniciais" aria-hidden="true">{iniciais(usuario.nome)}</span>
+                          {usuario.nome}
+                        </span>
+                      </td>
                       <td className="text-theme-secondary">{usuario.email}</td>
                       <td>{PERFIS[usuario.perfil] || usuario.perfil}</td>
                       <td>
@@ -209,15 +240,35 @@ function GestaoUsuarios() {
                         </span>
                       </td>
                       <td className="text-end text-nowrap">
-                        <button type="button" className="btn btn-link btn-sm p-0 me-3" onClick={() => editar(usuario)}>
-                          Editar
-                        </button>
-                        <button type="button" className="btn btn-link btn-sm p-0 me-3" onClick={() => alternarAtivo(usuario)}>
-                          {usuario.ativo ? 'Desativar' : 'Ativar'}
-                        </button>
-                        <button type="button" className="btn btn-link btn-sm p-0 text-danger" onClick={() => remover(usuario)}>
-                          Excluir
-                        </button>
+                        <div className="d-inline-flex gap-2">
+                          <button
+                            type="button"
+                            className="acao-btn"
+                            onClick={() => editar(usuario)}
+                            aria-label={`Editar ${usuario.nome}`}
+                          >
+                            <Icone caminho={ICONES.editar} />
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            className="acao-btn"
+                            onClick={() => alternarAtivo(usuario)}
+                            aria-label={`${usuario.ativo ? 'Desativar' : 'Ativar'} ${usuario.nome}`}
+                          >
+                            <Icone caminho={ICONES.ativar} />
+                            {usuario.ativo ? 'Desativar' : 'Ativar'}
+                          </button>
+                          <button
+                            type="button"
+                            className="acao-btn perigo"
+                            onClick={() => remover(usuario)}
+                            aria-label={`Excluir ${usuario.nome}`}
+                          >
+                            <Icone caminho={ICONES.excluir} />
+                            Excluir
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
