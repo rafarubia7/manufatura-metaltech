@@ -1,0 +1,70 @@
+# Stack completa do MetalTech: MySQL + API REST (Spring Boot) + dashboard (React/Nginx).
+# As credenciais vêm do arquivo .env na raiz (copie de .env.example).
+#
+#   Tudo em contêiner:                          docker compose up -d --build
+#   Somente o banco (back-end rodando via mvnw): docker compose up -d db
+#
+# Endereços no host: dashboard http://localhost:3000 | API http://localhost:8080 | MySQL localhost:3307
+services:
+  db:
+    image: mysql:8.0
+    container_name: metaltech-db
+    restart: unless-stopped
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci", "--default-time-zone=+00:00"]
+    environment:
+      MYSQL_DATABASE: metaltech
+      MYSQL_USER: ${MYSQL_USER:-metaltech}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no arquivo .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no arquivo .env}
+    ports:
+      - "3307:3306"   # 3307 no host para não conflitar com um MySQL local
+    volumes:
+      - mysql_data:/var/lib/mysql                                   # persistência dos dados
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro      # roda só com o volume vazio
+    networks:
+      - rede_interna
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u $$MYSQL_USER --password=$$MYSQL_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  backend:
+    build: ./backend
+    image: metaltech-backend
+    container_name: metaltech-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy   # só sobe quando o MySQL aceita conexões
+    environment:
+      # "db" é o nome do serviço: resolvido pela rede interna do compose
+      DB_URL: jdbc:mysql://db:3306/metaltech?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USERNAME: ${MYSQL_USER:-metaltech}
+      DB_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no arquivo .env}
+      API_KEY: ${API_KEY:-}
+      CORS_ORIGENS: ${CORS_ORIGENS:-*}
+    ports:
+      - "8080:8080"
+    networks:
+      - rede_interna
+
+  frontend:
+    build: ./frontend
+    image: metaltech-frontend
+    container_name: metaltech-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"   # dashboard em http://localhost:3000 (chama a API em :8080 no mesmo host)
+    networks:
+      - rede_interna
+
+volumes:
+  mysql_data:
+
+networks:
+  rede_interna:
+    driver: bridge

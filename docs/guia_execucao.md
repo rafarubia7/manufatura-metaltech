@@ -40,7 +40,7 @@ Não é preciso editar IP da API em lugar nenhum enquanto o gateway, o back-end 
 
 ### Passo 0 — Credenciais (`.env`)
 
-O `docker-compose.yml` **não sobe** sem o arquivo `.env` na raiz do repositório. O `.env.example` é só o modelo: o Docker não o lê.
+O `compose.yaml` **não sobe** sem o arquivo `.env` na raiz do repositório. O `.env.example` é só o modelo: o Docker não o lê.
 
 ```powershell
 Copy-Item .env.example .env
@@ -65,7 +65,7 @@ Esperado: **60 testes, 0 falhas**, terminando em `BUILD SUCCESS`.
 Na raiz do repositório:
 
 ```powershell
-docker compose up -d mysql
+docker compose up -d db
 docker compose ps        # repita até o status ficar "healthy"
 ```
 
@@ -99,11 +99,16 @@ $env:SERVER_PORT = "8081"
 .\mvnw.cmd spring-boot:run
 ```
 
-**Opção B, tudo em contêiner.** Esta forma lê o `.env` sozinha:
+**Opção B, tudo em contêiner.** Esta forma lê o `.env` sozinha e sobe o banco (`db`), a API (`backend`) e o dashboard (`frontend`) na rede interna `rede_interna`:
 
 ```powershell
 docker compose up -d --build
+docker compose ps -a     # db "healthy", backend e frontend "Up"
+docker compose logs -f backend
 ```
+
+- Dashboard: http://localhost:3000 (Nginx; chama a API em `:8080` no mesmo host)
+- Na primeira subida, com o volume `mysql_data` vazio, o MySQL roda o `db/init.sql` (charset `utf8mb4`). As tabelas são criadas pelo Flyway quando o back-end sobe.
 
 Verificações:
 
@@ -120,7 +125,7 @@ Variáveis de ambiente aceitas pelo back-end: `DB_URL`, `DB_USERNAME`, `DB_PASSW
 
 ```powershell
 docker compose down -v          # apaga o volume do MySQL
-docker compose up -d mysql
+docker compose up -d db
 ```
 
 ## 4. Front-end (dashboard)
@@ -268,7 +273,7 @@ No PowerShell, `curl` é um apelido de `Invoke-WebRequest`; por isso o comando �
 | `No module named 'requests'` ao rodar o gateway | Rodou com `py`/`python` global, não com o venv | Use `.\.venv\Scripts\python gateway.py` |
 | `Python was not found` / abre a Microsoft Store | Python não instalado ou só o atalho da Store | Instale o Python (seção 1) |
 | `a execução de scripts foi desabilitada` ao ativar o venv | Política de execução do PowerShell | Não ative o venv: chame `.\.venv\Scripts\python` direto |
-| `Connection to localhost:3306 refused` | MySQL não está rodando, ou porta errada | `docker compose up -d mysql`; o host usa a porta `3307` |
+| `Connection to localhost:3306 refused` | MySQL não está rodando, ou porta errada | `docker compose up -d db`; o host usa a porta `3307` |
 | `failed to connect to the docker API` | Docker Desktop fechado | Abra o Docker Desktop e aguarde ficar pronto |
 | `Access denied for user 'metaltech'` ao subir o back-end local | A senha do `.env` não foi para a sessão, ou o volume foi criado com outra senha | Rode o carregamento do `.env` (Passo 3); se persistir, `docker compose down -v` |
 | `Access denied for user 'root'@'localhost'` | Usuário ou senha do Workbench errados | Use `root` e a senha de `MYSQL_ROOT_PASSWORD` (arquivo `.env`) |

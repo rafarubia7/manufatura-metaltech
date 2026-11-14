@@ -41,7 +41,7 @@ flowchart LR
 - **Front-end:** React 19, React Router 7, Bootstrap 5, Recharts, Vite
 - **Automação:** Python 3, mestre IO-Link ifm AL1300 (HTTP/JSON)
 - **Ciência de Dados:** Python 3.11+, pandas, numpy, scipy, matplotlib
-- **Infra local:** Docker Compose (MySQL e, opcionalmente, o back-end)
+- **Infra local:** Docker Compose (`compose.yaml`: MySQL, API e dashboard em contêineres, rede interna e volume `mysql_data`)
 
 ## Estrutura do repositório
 
@@ -53,7 +53,9 @@ flowchart LR
 │   ├── src/test/                testes unitários e de integração (H2 e MySQL)
 │   └── Dockerfile
 ├── frontend/                    Dashboard web (React + Vite)
-│   └── src/components/          NavBar, PainelAoVivo, GraficosHistorico, TabelaManutencoes, GestaoUsuarios
+│   ├── src/components/          NavBar, PainelAoVivo, GraficosHistorico, TabelaManutencoes, GestaoUsuarios
+│   ├── Dockerfile               build com Node e publicação com Nginx
+│   └── nginx.conf
 ├── automacao/                   Gateway IO-Link: lê os sensores reais e envia à API
 ├── dados/                       Ciência de Dados (CIDA)
 │   ├── gerar_dataset.py         geração do dataset sintético
@@ -71,7 +73,9 @@ flowchart LR
 │   ├── guia_execucao.md         passo a passo completo de execução
 │   ├── guia_frontend.md         integração do front-end
 │   └── roadmap_projeto.md       plano de entrega
-├── docker-compose.yml
+├── db/
+│   └── init.sql             inicialização do MySQL (charset/fuso; tabelas via Flyway)
+├── compose.yaml             stack Docker: db (MySQL) + backend (API) + frontend (dashboard)
 └── README.md
 ```
 
@@ -90,7 +94,7 @@ Edite o `.env` e defina as senhas. Ele não vai para o Git. O back-end lê o `..
 ### 1. Banco de dados
 
 ```powershell
-docker compose up -d mysql
+docker compose up -d db
 docker compose ps    # aguarde "healthy" (porta 3307 no host)
 ```
 
@@ -116,6 +120,19 @@ npm run dev
 ```
 
 Rotas: `/` (monitoramento ao vivo), `/analise`, `/ocorrencias` e `/usuarios`.
+
+### Tudo em contêiner (alternativa aos passos 1 a 3)
+
+```powershell
+docker compose up -d --build
+docker compose ps
+```
+
+- Dashboard: http://localhost:3000
+- API: http://localhost:8080/api/v1 (Swagger em http://localhost:8080/swagger-ui.html)
+- MySQL: `localhost:3307`
+
+Os dados ficam no volume `mysql_data` e sobrevivem a `docker compose down`; `docker compose down -v` apaga o banco.
 
 ### 4. Gateway IO-Link (dados reais)
 

@@ -70,7 +70,7 @@ Legenda: ✅ pronto · ⏳ depende da equipe · ⚠️ pronto com ressalva
 1. Com a API parada, rodar `cd backend; .\mvnw.cmd clean verify`. Precisa terminar em `BUILD SUCCESS`.
 2. Rodar `cd frontend; npm run lint; npm run build`.
 3. Organizar os commits por área (back-end, front-end, automação, CIDA, documentação) e criar a branch/tag de entrega.
-4. Antes da apresentação, opcional: limpar o banco de testes para começar a demonstração do zero (`docker compose down -v` e `docker compose up -d mysql` apagam **todos** os dados).
+4. Antes da apresentação, opcional: limpar o banco de testes para começar a demonstração do zero (`docker compose down -v` e `docker compose up -d db` apagam **todos** os dados).
 
 ## 5. Riscos
 

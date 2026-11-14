@@ -1,0 +1,25 @@
+# Dependências e build locais (a imagem instala e compila do zero)
+node_modules/
+dist/
+*.log
+
+# Variáveis locais (podem apontar para outro endereço de API)
+.env.local
+.env.*.local
+
+# IDE / sistema / Git
+.git
+.gitignore
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Python
+.venv/
+__pycache__/
+
+# Arquivos que não entram no build
+Dockerfile
+.dockerignore
+README.md
