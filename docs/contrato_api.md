@@ -63,6 +63,8 @@ Resposta `201` com a leitura persistida (campo `id`) e a lista `alertas` gerados
 | PUT | `/usuarios/{id}` | Atualizar usuário (e ativar/desativar) |
 | DELETE | `/usuarios/{id}` | Excluir usuário |
 
+Ordenação de `GET /leituras`: **sem filtros**, a lista vem sempre da leitura mais recente para a mais antiga (o dashboard e a CIDA dependem disso), e o parâmetro `sort` é ignorado. **Com filtros** (`inicio`/`fim`, `tipoPeca` ou `statusReservatorio`), vale o `sort` informado, e o padrão é `dataHora` crescente.
+
 Corpo de `POST`/`PUT /usuarios`:
 
 ```json

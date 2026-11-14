@@ -265,9 +265,9 @@ O roteamento usa **React Router** (`BrowserRouter` em `main.jsx`, `Routes` em `A
 
 | Rota | Componente | Conteúdo | Atualização |
 |---|---|---|---|
-| `/` | `PainelAoVivo` | Cards de metálicas, plásticas, desconhecidas e ocorrências ativas; nível do reservatório com status; últimas 5 leituras | a cada 4 s |
+| `/` | `PainelAoVivo` | Cards de metálicas, não metálicas, desconhecidas (nenhum sensor acionado) e ocorrências ativas; nível do reservatório com status e marcas de 20/80/95%; últimas 5 leituras com data e hora | a cada 4 s |
 | `/analise` | `GraficosHistorico` | Evolução do nível (com as linhas de 80% e 95%), distribuição por tipo de peça e resumo estatístico: média, mediana, desvio, mínimo, máximo e quartis | a cada 10 s |
-| `/ocorrencias` | `TabelaManutencoes` | Alertas pendentes com data, tipo legível e botão "Marcar como resolvido" | botão Atualizar |
+| `/ocorrencias` | `TabelaManutencoes` | Alertas pendentes com data, tipo legível e botão "Marcar como resolvido" | a cada 10 s e botão Atualizar |
 | `/usuarios` | `GestaoUsuarios` | CRUD de usuários (formulário + tabela, ativar/desativar, excluir) | ao salvar |
 | qualquer outra | — | redireciona para `/` | — |
 
