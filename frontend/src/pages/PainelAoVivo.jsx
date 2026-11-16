@@ -1,6 +1,7 @@
 // src/pages/PainelAoVivo.jsx
 import React, { useEffect, useState } from 'react';
 import { buscarEstatisticas, buscarLeituras } from '../services/api';
+import CartaoRealidadeAumentada from '../components/CartaoRealidadeAumentada';
 
 // Faixas do reservatório (mesmas regras do back-end).
 const LIMITES_NIVEL = [
@@ -313,6 +314,9 @@ function PainelAoVivo() {
           </div>
         </div>
       </div>
+
+      {/* Linha 3: acesso ao app de Realidade Aumentada */}
+      <CartaoRealidadeAumentada />
     </div>
   );
 }

@@ -65,6 +65,36 @@ body {
   border-color: var(--border-hover);
 }
 
+/* QR code do app de RA: miniatura clicável e versão ampliada.
+   O fundo fica sempre branco, para o celular conseguir ler também no tema escuro. */
+.qr-miniatura {
+  flex-shrink: 0;
+  padding: 6px;
+  background-color: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  cursor: zoom-in;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.qr-miniatura:hover,
+.qr-miniatura:focus-visible {
+  border-color: var(--border-hover);
+  transform: scale(1.03);
+}
+
+.qr-miniatura img {
+  display: block;
+}
+
+.qr-ampliado {
+  width: min(100%, 70vh, 420px);
+  height: auto;
+  padding: 12px;
+  background-color: #ffffff;
+  border-radius: 8px;
+}
+
 /* Rótulos dos KPIs */
 .kpi-label {
   font-size: 0.8125rem;

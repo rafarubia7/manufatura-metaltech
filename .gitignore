@@ -22,6 +22,9 @@ Thumbs.db
 # Ambiente local e segredos
 .env
 
+# Backups do banco (contêm dados; ficam só na máquina)
+backups/
+
 # Saída repetida da análise (o conteúdo está no relatório de Ciência de Dados)
 dados/resultados/resumo*.txt
 

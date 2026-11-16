@@ -55,8 +55,9 @@ frontend/
 │   ├── main.jsx             ponto de entrada: BrowserRouter, Bootstrap e estilos
 │   ├── App.jsx              cabeçalho, estado global (conexão, alertas, tema) e rotas
 │   ├── pages/               uma tela por rota: PainelAoVivo, GraficosHistorico, TabelaManutencoes, GestaoUsuarios
-│   ├── components/          componentes reutilizáveis: NavBar
+│   ├── components/          componentes reutilizáveis: NavBar, CartaoRealidadeAumentada
 │   ├── services/api.js      todas as chamadas HTTP à API
+│   ├── assets/              QR code do app de RA
 │   └── styles/index.css     tema claro/escuro e estilos próprios (sobre o Bootstrap)
 ├── nginx.conf               servidor do build no Docker (fallback das rotas)
 ├── Dockerfile               build com Node e publicação com Nginx
@@ -70,7 +71,7 @@ O roteamento usa **React Router** (`BrowserRouter` em `main.jsx`, `Routes` em `A
 
 | Rota | Tela | Conteúdo | Atualização |
 |---|---|---|---|
-| `/` | `PainelAoVivo` | Cards de metálicas, não metálicas, desconhecidas (nenhum sensor acionado) e ocorrências ativas; nível do reservatório com status e marcas de 20/80/95%; últimas 5 leituras com data e hora | a cada 4 s |
+| `/` | `PainelAoVivo` | Cards de metálicas, não metálicas, desconhecidas (nenhum sensor acionado) e ocorrências ativas; nível do reservatório com status e marcas de 20/80/95%; últimas 5 leituras com data e hora; cartão do app de RA com QR code ampliável | a cada 4 s |
 | `/analise` | `GraficosHistorico` | Evolução do nível (com as linhas de 80% e 95%), distribuição por tipo de peça e resumo estatístico: média, mediana, desvio, mínimo, máximo e quartis | a cada 10 s |
 | `/ocorrencias` | `TabelaManutencoes` | Alertas pendentes com data, tipo legível e botão "Marcar como resolvido" | a cada 10 s e botão Atualizar |
 | `/usuarios` | `GestaoUsuarios` | CRUD de usuários (formulário + tabela, ativar/desativar, excluir) | ao salvar |
@@ -119,4 +120,7 @@ As respostas passam por funções de normalização em `api.js` (por exemplo, `n
 
 O dashboard e o R.A são as duas interfaces previstas na seção 6 do [enunciado](../docs/projeto.md). O R.A está publicado em https://rafarubia7.github.io/manufatura-metaltech/realidade-aumentada/ e usa dados simulados, porque o celular não tem acesso à rede do SENAI, onde ficam a bancada e a API.
 
-**Pendência do front-end:** incluir na `NavBar` um link externo "Realidade Aumentada" (`<a href={import.meta.env.VITE_RA_URL} target="_blank" rel="noopener noreferrer">`, com a URL em `VITE_RA_URL`). Opcional: mostrar o QR code ([docs/img/qrcode-ra.png](../docs/img/qrcode-ra.png), copiado para `frontend/public/`) no Painel, para abrir no celular durante a apresentação.
+**Acesso pelo dashboard:** o componente `CartaoRealidadeAumentada`, no fim do painel de Monitoramento (`/`), mostra o QR code do app e um botão "Abrir o app de RA".
+- Clicar no QR abre a imagem ampliada na tela, para ler com o celular. Fecha com Esc, com o botão × ou com um clique fora da imagem.
+- O QR tem sempre fundo branco, para ser lido também no tema escuro.
+- A URL padrão é a do GitHub Pages. Para testar outro endereço em desenvolvimento, defina `VITE_RA_URL` no `.env.local`. A imagem fica em `src/assets/qrcode-ra.png`; se a URL mudar, gere um QR novo.

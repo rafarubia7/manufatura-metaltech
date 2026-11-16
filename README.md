@@ -52,16 +52,16 @@ Situação em 16/11/2026, conforme os critérios de avaliação (seção 8 do en
 
 | Unidade curricular | Status | Evidência e ressalvas |
 |---|---|---|
-| Automação Industrial | ✅ | Leitura dos 3 sensores, classificação, envio com fila (testado em 12/11), circuito documentado. ⚠️ O sensor de nível (porta X01) falha com `IO-Link code 530`: problema físico, ver [automacao/README.md](automacao/README.md#problema-conhecido-porta-x01-com-io-link-code-530) |
+| Automação Industrial | ✅ | Leitura dos 3 sensores, classificação, envio com fila (testado em 12/11), circuito documentado. ⚠️ O sensor de nível (porta X01) falha com `IO-Link code 530`: problema físico do equipamento do laboratório, fora do alcance da equipe, ver [automacao/README.md](automacao/README.md#problema-conhecido-porta-x01-com-io-link-code-530) |
 | Ciência de Dados | ✅ | Estatística descritiva, 10 gráficos, 4 famílias de detectores de outliers, validação API × pandas 23/23 |
-| Computação em Nuvem | ✅ | Servidor local em Docker em operação e AWS justificada para produção. ⚠️ Sem login nas rotas e sem HTTPS na rede local (limitações documentadas na arquitetura) |
+| Computação em Nuvem | ✅ | Servidor local em Docker em operação e AWS justificada para produção. ⚠️ Sem login nas rotas e sem HTTPS na rede local. A `X-API-Key` existe e é testada, mas não foi ativada, porque a API só é acessível na rede isolada do laboratório (limitações documentadas na arquitetura) |
 | Desenvolvimento Back-end | ✅ | OO com herança, polimorfismo e encapsulamento; 72 testes; 90,8% de cobertura; Swagger e contrato documentados |
-| Frameworks Front-end | ✅ | Responsivo, 4 rotas, componentes com props e estado, Bootstrap 5, integração com a API |
+| Frameworks Front-end | ✅ | Responsivo, 4 rotas, componentes com props e estado, Bootstrap 5, integração com a API, acesso ao app de RA por link e QR code no painel |
 | Eletiva I — Realidade Aumentada | ⚠️ | Reconhecimento, rastreamento e usabilidade atendidos. **A integração com dados reais não foi possível, por restrição de rede** (abaixo) |
 
 ### Restrição de rede e o R.A
 
-- **Fato:** a bancada (mestre IO-Link `10.110.12.41`) e o servidor da plataforma ficam na rede do SENAI. O celular que abre o R.A fica fora dessa rede, e a equipe não tem acesso à rede nem aos servidores da faculdade. A restrição foi confirmada com o professor.
+- **Fato:** a bancada (mestre IO-Link `10.110.12.41`) e o servidor da plataforma ficam na rede do SENAI. O celular que abre o R.A fica fora dessa rede, e a equipe não tem acesso à rede nem aos servidores da faculdade. A restrição foi confirmada com o professor, que aceitou o R.A com dados simulados.
 - **Consequência:** o R.A não consegue consumir `GET /api/v1/esteira/status`, como pedem as seções 5.5 e 6 do enunciado.
 - **Decisão:** o R.A usa uma simulação local no mesmo formato de `/esteira/status`, com os mesmos limiares do back-end (80% e 95%), o critério de enchimento da Ciência de Dados e o selo "DADOS DE TESTE (SIMULADOS)". O endpoint já existe e é testado (`EsteiraControllerTest`). O mapeamento campo a campo está no [contrato da API](backend/README.md#7-consumidores-da-api).
 - **Evolução:** na arquitetura de produção ([docs/arquitetura_nuvem.md](docs/arquitetura_nuvem.md#27-isolamento-da-rede-do-laboratório)), o gateway envia as leituras para uma API pública por HTTPS, e o R.A passa a consumi-la de qualquer rede.
@@ -70,15 +70,16 @@ Situação em 16/11/2026, conforme os critérios de avaliação (seção 8 do en
 
 **Realidade Aumentada** (responsável: colega do R.A, plano já enviado): ajustar o limiar "baixo" para 20% (`js/config.js`), tirar "(> 5 %/min)" do rótulo da faixa (`index.html`), trocar `?v=6` por `?v=7`, atualizar o README do R.A, publicar e testar no celular.
 
-**Front-end:** link "Realidade Aumentada" na barra de navegação e, opcionalmente, o QR code no painel ([frontend/README.md](frontend/README.md#relação-com-a-realidade-aumentada)).
-
 **Checklist de entrega:**
-- [ ] Aceite do professor, por escrito, sobre o R.A com dados simulados
-- [ ] Sensor de nível (X01) realinhado e recalibrado, ou plano B combinado
-- [ ] `API_KEY` longa e aleatória no `.env` do servidor
-- [ ] Backup do banco antes da apresentação (`mysqldump`, [arquitetura](docs/arquitetura_nuvem.md#24-disponibilidade))
-- [ ] `.\mvnw.cmd clean verify` com `BUILD SUCCESS` e `npm run lint; npm run build` sem erros
+- [x] Aceite do professor sobre o R.A com dados simulados
+- [x] Acesso ao R.A pelo dashboard: link e QR code (clique para ampliar) no painel de Monitoramento
+- [x] Backup do banco (`mysqldump`, [arquitetura](docs/arquitetura_nuvem.md#24-disponibilidade)), salvo em `backups/`, fora do Git. Se as leituras da demonstração estiverem no servidor do laboratório, repita o comando lá antes da apresentação
+- [x] `.\mvnw.cmd clean verify` com `BUILD SUCCESS` (72 testes) e `npm run lint; npm run build` sem erros
 - [ ] Tag de entrega (por exemplo, `git tag -a v1.0-entrega -m "Entrega final PI II"`)
+
+**Limitações aceitas:**
+- **Sensor de nível (porta X01):** falha com `IO-Link code 530` por problema físico do equipamento do laboratório, fora do alcance da equipe. O gateway mantém a última leitura válida e as outras portas seguem funcionando.
+- **`API_KEY` desativada:** o mecanismo existe e é testado, mas não foi necessário, porque a API só é acessível na rede isolada do laboratório. Para ativar, basta preencher `API_KEY` no `.env`.
 
 ### Roteiro da apresentação
 
@@ -90,13 +91,13 @@ No laboratório, com o servidor e o gateway na rede do SENAI:
 4. **Nuvem:** `docker compose ps` com tudo `healthy`, dashboard aberto pelo IP do servidor em outro computador; depois a arquitetura AWS proposta.
 5. **Ciência de Dados:** gráficos do relatório e o critério de 5 %/min, que vira o alerta "Enchimento rápido".
 6. **Front-end:** dashboard atualizando sozinho enquanto as peças passam; as 4 rotas.
-7. **R.A:** abrir pelo QR code, apontar para a esteira e mostrar os painéis. Explicar a restrição de rede e o mapeamento simulação ↔ `/esteira/status`.
+7. **R.A:** ampliar o QR code no painel de Monitoramento, abrir o app no celular, apontar para a esteira e mostrar os painéis. Explicar a restrição de rede e o mapeamento simulação ↔ `/esteira/status`.
 8. **Robustez:** derrubar a API por alguns segundos, passar peças, subir a API de novo e mostrar que nenhuma leitura se perdeu.
 
 | Risco | Mitigação |
 |---|---|
-| Critério "integração com dados reais" da Eletiva I | Aceite do professor por escrito; explicação e mapeamento na apresentação |
-| Sensor de nível instável | Recalibrar antes; em último caso, mostrar o nível com o dataset da Ciência de Dados |
+| Critério "integração com dados reais" da Eletiva I | Aceite do professor já obtido; explicação e mapeamento na apresentação |
+| Sensor de nível instável (equipamento do laboratório) | Explicar a falha da porta X01; se o nível oscilar, mostrar o comportamento com o dataset da Ciência de Dados |
 | Rede do laboratório | Rodar `gateway.py --sondar` antes de começar |
 | Servidor local único | Manter ligado, fazer backup e apresentar a AWS como evolução |
 | R.A não reconhecer a esteira | Testar no ângulo da foto de referência; ter a foto aberta em outra tela como alvo reserva |

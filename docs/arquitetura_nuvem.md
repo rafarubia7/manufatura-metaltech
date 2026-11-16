@@ -89,7 +89,7 @@ Na nuvem (seção 3), a mesma ideia continua: o Elastic Beanstalk roda os mesmos
 - **Controle de acesso por usuário ainda não é exigido nas rotas.** Os perfis existem, mas não há login: qualquer máquina da rede do laboratório pode consultar e alterar dados pela API. No servidor local, o risco fica restrito à rede interna do laboratório. Próximo passo: login com token (Spring Security + JWT, ou Amazon Cognito em produção).
 - **Sem criptografia em trânsito na rede local:** o tráfego é HTTP dentro da LAN. Em produção, HTTPS em tudo (seção 3.4).
 - **Sem criptografia em repouso própria:** o volume do MySQL fica no disco do servidor. Mitigação local: criptografia de disco do sistema operacional (BitLocker). Em produção, RDS com KMS.
-- **Recomendado antes da demonstração:** preencher `API_KEY` no `.env` com uma chave longa e aleatória e rodar `docker compose up -d` (a API e o gateway passam a usar a mesma chave).
+- **`API_KEY` não ativada nesta implantação:** como a API só é acessível na rede isolada do laboratório, a chave do dispositivo não foi necessária. O mecanismo existe e é coberto por testes (`ApiKeyFilterTest`). Para ativar, basta preencher `API_KEY` no `.env` com uma chave longa e aleatória e rodar `docker compose up -d`: a API e o gateway passam a usar a mesma chave. Em produção (seção 3), ela é obrigatória.
 
 ### 2.4 Disponibilidade
 
