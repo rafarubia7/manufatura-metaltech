@@ -1,4 +1,4 @@
-// src/components/TabelaManutencoes.jsx
+// src/pages/TabelaManutencoes.jsx
 import React, { useEffect, useState } from 'react';
 import { buscarAlertas, resolverAlerta } from '../services/api';
 

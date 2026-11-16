@@ -15,5 +15,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # é montada por cima, para gráficos e resultados aparecerem direto no host.
 COPY . .
 
+# Os scripts ficam em dados/scripts/: rodando a partir daqui, os comandos do
+# compose continuam curtos (ex.: "docker compose run --rm dados gerar_dataset.py").
+WORKDIR /app/dados/scripts
 ENTRYPOINT ["python"]
 CMD ["analise_estatistica.py"]

@@ -1,4 +1,4 @@
-// src/components/PainelAoVivo.jsx
+// src/pages/PainelAoVivo.jsx
 import React, { useEffect, useState } from 'react';
 import { buscarEstatisticas, buscarLeituras } from '../services/api';
 

@@ -24,7 +24,7 @@ import requests
 
 from analise_estatistica import simular_alertas
 
-PASTA = Path(__file__).resolve().parent
+PASTA = Path(__file__).resolve().parent.parent  # raiz de dados/ (os scripts ficam em dados/scripts/)
 TOLERANCIA = 0.01
 
 
@@ -138,7 +138,7 @@ def validar(sessao: requests.Session, url: str, df: pd.DataFrame) -> list[dict]:
 def principal() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
     analisador = argparse.ArgumentParser(description="Envia o dataset sintético para a API e valida a integração")
-    analisador.add_argument("--csv", type=Path, default=PASTA / "leituras_simuladas.csv")
+    analisador.add_argument("--csv", type=Path, default=PASTA / "dataset" / "leituras_simuladas.csv")
     analisador.add_argument("--url", default="http://localhost:8080")
     analisador.add_argument("--limite", type=int, default=None, help="envia apenas as N primeiras leituras")
     analisador.add_argument("--atraso", type=float, default=0.0, help="pausa em segundos entre requisições")

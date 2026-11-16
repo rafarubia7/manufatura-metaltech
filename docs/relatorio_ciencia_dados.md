@@ -35,7 +35,7 @@ O objetivo desta etapa é:
 
 ## 2. Metodologia
 
-### 2.1 Geração dos dados (`dados/gerar_dataset.py`)
+### 2.1 Geração dos dados (`dados/scripts/gerar_dataset.py`)
 
 Cada linha do dataset é uma peça passando pela estação de sensores. A simulação avança evento a evento (chegada de peças) com semente fixa (`seed = 42`), o que garante o mesmo CSV a cada execução.
 
@@ -58,7 +58,7 @@ Cada linha do dataset é uma peça passando pela estação de sensores. A simula
 | Falha de conexão | 7 episódios, 6–13 min | Os dois sensores com intensidade ≈ 0 → DESCONHECIDA |
 | Esvaziamento brusco | 3 episódios | Descarga manual fora do procedimento, a 10–15%/min |
 
-### 2.2 Análise (`dados/analise_estatistica.py`)
+### 2.2 Análise (`dados/scripts/analise_estatistica.py`)
 
 - **Descritiva:** média, mediana, desvio padrão amostral, quartis (interpolação linear), IQR, assimetria, curtose e coeficiente de variação.
 - **Tempo em cada status:** cada leitura é ponderada pelo intervalo até a próxima. Isso evita superestimar períodos de produção intensa, que têm mais leituras por minuto.
@@ -265,7 +265,7 @@ Interpretação:
 
 ## 8. Validação da integração com a API REST
 
-O script `dados/enviar_para_api.py` enviou as 9.965 leituras por `POST /api/v1/leituras`, no contrato JSON do plano técnico, para o back-end conectado ao MySQL 8.0 (Docker).
+O script `dados/scripts/enviar_para_api.py` enviou as 9.965 leituras por `POST /api/v1/leituras`, no contrato JSON do plano técnico, para o back-end conectado ao MySQL 8.0 (Docker).
 
 | Item | Resultado |
 |---|---|
@@ -305,18 +305,20 @@ A análise também roda diretamente sobre os dados persistidos (`analise_estatis
 ```powershell
 cd dados
 python -m venv .venv
-.venv\Scripts\pip install -r requirements.txt
-.venv\Scripts\python gerar_dataset.py          # mesmo CSV a cada execução (seed 42)
-.venv\Scripts\python analise_estatistica.py    # gráficos e resultados
-.venv\Scripts\python enviar_para_api.py        # com o back-end rodando
+.\.venv\Scripts\python -m pip install -r requirements.txt
+.\.venv\Scripts\python scripts\gerar_dataset.py          # mesmo CSV a cada execução (seed 42)
+.\.venv\Scripts\python scripts\analise_estatistica.py    # gráficos e resultados
+.\.venv\Scripts\python scripts\enviar_para_api.py        # com o back-end rodando
 ```
+
+Passo a passo completo, inclusive em contêiner, no [dados/README.md](../dados/README.md).
 
 Artefatos:
 
 | Arquivo | Conteúdo |
 |---|---|
-| `dados/leituras_simuladas.csv` | Dataset completo (9.965 leituras) |
-| `dados/eventos_simulados.csv` | Janelas das anomalias injetadas |
+| `dados/dataset/leituras_simuladas.csv` | Dataset completo (9.965 leituras) |
+| `dados/dataset/eventos_simulados.csv` | Janelas das anomalias injetadas |
 | `dados/resultados/estatisticas.json` | Todos os indicadores numéricos |
 | `dados/resultados/outliers.csv` | Leituras sinalizadas e respectivos detectores |
 | `dados/resultados/validacao_integracao.json` | Validação API × pandas |

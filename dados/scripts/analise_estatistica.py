@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-PASTA = Path(__file__).resolve().parent
+PASTA = Path(__file__).resolve().parent.parent  # raiz de dados/ (os scripts ficam em dados/scripts/)
 PASTA_RESULTADOS = PASTA / "resultados"
 PASTA_GRAFICOS = PASTA / "graficos"
 FUSO = timezone(timedelta(hours=-3))
@@ -649,7 +649,7 @@ def principal() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
     analisador = argparse.ArgumentParser(description="Análise estatística da esteira MetalTech")
     analisador.add_argument("--fonte", choices=["csv", "api"], default="csv")
-    analisador.add_argument("--csv", type=Path, default=PASTA / "leituras_simuladas.csv")
+    analisador.add_argument("--csv", type=Path, default=PASTA / "dataset" / "leituras_simuladas.csv")
     analisador.add_argument("--url", default="http://localhost:8080")
     argumentos = analisador.parse_args()
 

@@ -23,7 +23,7 @@ src/main/resources/db/migration/  V1 (tabelas), V2 (acentuação e reclassifica�
 
 **Orientação a objetos:**
 - **Herança e polimorfismo:** `Sensor` é abstrata. Cada subclasse (`SensorIndutivo`, `SensorCapacitivo`) diz qual tipo de peça o seu acionamento indica, e o `ClassificadorPeca` combina os sensores sem conhecer as subclasses.
-- **Encapsulamento:** `Usuario` e `LeituraSensores` validam o próprio estado. Por exemplo, as permissões derivam do perfil, e um usuário inativo perde todas.
+- **Encapsulamento:** `Usuario` não tem setters. Ele só muda por métodos próprios (`atualizar`, `ativar`, `desativar`), exige perfil, normaliza o e-mail e decide as permissões a partir do perfil (um usuário inativo perde todas). `LeituraSensores` controla a lista de alertas por `adicionarAlerta` e `removerAlerta`.
 
 ## Executar
 
@@ -64,24 +64,20 @@ Esperado: **72 testes, 0 falhas**, `BUILD SUCCESS` e o relatório de cobertura J
 
 ### 4. Subir a API
 
-**Local (desenvolvimento).** O Spring lê variáveis de ambiente, não o `.env`. Carregue o `.env` na sessão do PowerShell antes (uma vez por terminal):
+**Local (desenvolvimento).** Com o banco no ar:
 
 ```powershell
-# na raiz do repositório
-Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*([^#=\s]+)\s*=\s*(.*)$') { Set-Item "env:$($Matches[1])" $Matches[2].Trim() }
-}
 cd backend
 .\mvnw.cmd clean spring-boot:run
 ```
 
-Use sempre `clean` depois de atualizar o código, para recompilar todas as classes. Se a porta 8080 estiver ocupada, use `$env:SERVER_PORT = "8081"` e ajuste os clientes (`VITE_API_URL` no front e `api_url` no gateway).
+Rodando a partir de `backend/`, a API lê sozinha o `../.env` (`spring.config.import` no `application.yml`): usa `MYSQL_USER`, `MYSQL_PASSWORD` e `API_KEY` de lá. Variáveis de ambiente da sessão têm prioridade sobre o arquivo. Use sempre `clean` depois de atualizar o código, para recompilar todas as classes. Se a porta 8080 estiver ocupada, use `$env:SERVER_PORT = "8081"` e ajuste os clientes (`VITE_API_URL` no front e `api_url` no gateway).
 
 **Em contêiner.** Na raiz, `docker compose up -d --build` sobe banco, API e dashboard. O compose já lê o `.env`.
 
 | Variável de ambiente | Uso |
 |---|---|
-| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Conexão com o MySQL |
+| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Conexão com o MySQL. Sem elas, a API usa `localhost:3307` e o `MYSQL_USER`/`MYSQL_PASSWORD` do `.env` |
 | `SERVER_PORT` | Porta da API (padrão `8080`) |
 | `API_KEY` | Vazia = `POST /leituras` aberto (só desenvolvimento). Preenchida = exige o cabeçalho `X-API-Key` |
 | `CORS_ORIGENS` | Origens liberadas, separadas por vírgula (padrão `*`; em produção, só o domínio do dashboard) |
@@ -260,7 +256,7 @@ Qualquer mudança que quebre este contrato é combinada com toda a equipe antes 
 | `required variable MYSQL_PASSWORD is missing a value` | Não existe o arquivo `.env` | `Copy-Item .env.example .env` (passo 1) |
 | `failed to connect to the docker API` | Docker Desktop fechado | Abra o Docker Desktop e aguarde ficar pronto |
 | `Connection to localhost:3306 refused` | MySQL parado ou porta errada | `docker compose up -d db`; no host, a porta é `3307` |
-| `Access denied for user 'metaltech'` | A senha do `.env` não foi carregada na sessão, ou o volume foi criado com outra senha | Carregue o `.env` (passo 4); se persistir, `docker compose down -v` |
+| `Access denied for user 'metaltech'` | A API rodou fora de `backend/` (não achou o `../.env`), ou o volume do MySQL foi criado com outra senha | Rode a partir de `backend/`; se persistir, `docker compose down -v` e suba o banco de novo |
 | `Access denied for user 'root'@'localhost'` | Usuário ou senha do Workbench errados | Use `root` e a senha de `MYSQL_ROOT_PASSWORD` |
 | `Communications link failure` | MySQL no ar, mas sem acesso ou credenciais | Confira `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` |
 | `Port 8080 was already in use` | Outro processo na porta | `$env:SERVER_PORT = "8081"` e ajuste os clientes |

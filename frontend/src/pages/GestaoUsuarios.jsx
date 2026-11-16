@@ -1,4 +1,4 @@
-// src/components/GestaoUsuarios.jsx
+// src/pages/GestaoUsuarios.jsx
 import React, { useCallback, useEffect, useState } from 'react';
 import { atualizarUsuario, criarUsuario, excluirUsuario, listarUsuarios } from '../services/api';
 

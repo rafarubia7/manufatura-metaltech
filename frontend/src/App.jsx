@@ -2,10 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import NavBar from './components/NavBar';
-import PainelAoVivo from './components/PainelAoVivo';
-import GraficosHistorico from './components/GraficosHistorico';
-import TabelaManutencoes from './components/TabelaManutencoes';
-import GestaoUsuarios from './components/GestaoUsuarios';
+import PainelAoVivo from './pages/PainelAoVivo';
+import GraficosHistorico from './pages/GraficosHistorico';
+import TabelaManutencoes from './pages/TabelaManutencoes';
+import GestaoUsuarios from './pages/GestaoUsuarios';
 import { buscarAlertas, buscarEstatisticas } from './services/api';
 
 function App() {

@@ -2,7 +2,7 @@
 
 Dashboard web da plataforma: contagem de peças por tipo, nível do reservatório, gráficos e indicadores da Ciência de Dados, ocorrências e gestão de usuários. Consome a API REST do back-end ([contrato](../backend/README.md#contrato-da-api-v1)).
 
-Stack: React 19, React Router 7, Bootstrap 5, Recharts e Vite.
+Stack: React 19, React Router 7, Bootstrap 5, Recharts 3, Vite 8 e oxlint.
 
 ## Executar
 
@@ -46,11 +46,29 @@ const API_URL = import.meta.env.VITE_API_URL || `${window.location.protocol}//${
 - **Com `VITE_API_URL`**: usa o valor definido. Defina em `frontend/.env.local`, que não vai para o Git. Exemplo: `VITE_API_URL=http://localhost:8081`. Depois, reinicie o `npm run dev`.
 - **No Docker**, o valor entra no build (`ARG VITE_API_URL` no [Dockerfile](Dockerfile)). Vazio, vale o padrão acima.
 
-## Rotas e componentes
+## Estrutura
 
-O roteamento usa **React Router** (`BrowserRouter` em `main.jsx`, `Routes` em `App.jsx`). Cada rota é um componente em `src/components/`:
+```text
+frontend/
+├── index.html               página base do Vite
+├── src/
+│   ├── main.jsx             ponto de entrada: BrowserRouter, Bootstrap e estilos
+│   ├── App.jsx              cabeçalho, estado global (conexão, alertas, tema) e rotas
+│   ├── pages/               uma tela por rota: PainelAoVivo, GraficosHistorico, TabelaManutencoes, GestaoUsuarios
+│   ├── components/          componentes reutilizáveis: NavBar
+│   ├── services/api.js      todas as chamadas HTTP à API
+│   └── styles/index.css     tema claro/escuro e estilos próprios (sobre o Bootstrap)
+├── nginx.conf               servidor do build no Docker (fallback das rotas)
+├── Dockerfile               build com Node e publicação com Nginx
+├── vite.config.js
+└── .oxlintrc.json           regras do lint
+```
 
-| Rota | Componente | Conteúdo | Atualização |
+## Rotas e telas
+
+O roteamento usa **React Router** (`BrowserRouter` em `main.jsx`, `Routes` em `App.jsx`). Cada rota é uma tela em `src/pages/`:
+
+| Rota | Tela | Conteúdo | Atualização |
 |---|---|---|---|
 | `/` | `PainelAoVivo` | Cards de metálicas, não metálicas, desconhecidas (nenhum sensor acionado) e ocorrências ativas; nível do reservatório com status e marcas de 20/80/95%; últimas 5 leituras com data e hora | a cada 4 s |
 | `/analise` | `GraficosHistorico` | Evolução do nível (com as linhas de 80% e 95%), distribuição por tipo de peça e resumo estatístico: média, mediana, desvio, mínimo, máximo e quartis | a cada 10 s |
@@ -61,7 +79,7 @@ O roteamento usa **React Router** (`BrowserRouter` em `main.jsx`, `Routes` em `A
 - `NavBar` recebe o número de alertas por prop (`qtdAlertas`) e mostra o contador na rota Ocorrências.
 - `App` guarda o estado global (conexão com a API, alertas e tema) e o repassa às rotas por props. Exemplo: `TabelaManutencoes` recebe `aoAlterarAlertas` para atualizar o contador assim que um alerta é resolvido.
 - `App` verifica a conexão a cada 5 s e mostra "Conectado" ou "Sem conexão" no cabeçalho.
-- Estilo: Bootstrap 5 (grid responsivo, tabelas, formulários, badges) mais as variáveis de tema em `index.css`. O tema escuro também vale para os componentes do Bootstrap (`data-bs-theme`).
+- Estilo: Bootstrap 5 (grid responsivo, tabelas, formulários, badges) mais as variáveis de tema em `styles/index.css`. O tema escuro também vale para os componentes do Bootstrap (`data-bs-theme`).
 
 ## Endpoints consumidos
 
@@ -94,7 +112,7 @@ As respostas passam por funções de normalização em `api.js` (por exemplo, `n
 | Cabeçalho mostra "Sem conexão" | API fora do ar ou porta errada | `docker compose ps` (backend `healthy`) ou suba o back-end. Se a porta não for 8080, defina `VITE_API_URL` |
 | Funciona no servidor, mas não em outro PC | Página aberta por `localhost`, ou firewall | Abra pelo IP do servidor e libere as portas 3000 e 8080 |
 | `/analise` dá 404 ao recarregar | Servidor estático sem fallback do SPA | Use o contêiner (o `nginx.conf` já trata) ou `npm run preview` |
-| Painel vazio ("Aguardando envio de leituras...") | Banco sem leituras | Ligue o gateway (bancada) ou envie o dataset da Ciência de Dados (`dados/enviar_para_api.py`) |
+| Painel vazio ("Aguardando envio de leituras...") | Banco sem leituras | Ligue o gateway (bancada) ou envie o dataset da Ciência de Dados (`dados/scripts/enviar_para_api.py`) |
 | Porta 8080 ocupada | Outro processo usando a porta | `netstat -ano \| findstr :8080`, depois suba a API em outra porta (`SERVER_PORT`) e ajuste `VITE_API_URL` |
 
 ## Relação com a Realidade Aumentada

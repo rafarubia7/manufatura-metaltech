@@ -1,4 +1,4 @@
-// src/components/GraficosHistorico.jsx
+// src/pages/GraficosHistorico.jsx
 import React, { useEffect, useState } from 'react';
 import {
   AreaChart,

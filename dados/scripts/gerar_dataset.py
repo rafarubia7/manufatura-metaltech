@@ -21,7 +21,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-PASTA = Path(__file__).resolve().parent
+PASTA = Path(__file__).resolve().parent.parent  # raiz de dados/ (os scripts ficam em dados/scripts/)
 FUSO = timezone(timedelta(hours=-3))
 
 # (nome, hora inicial, peças/min, atraso médio de reação do operador em min)
@@ -287,7 +287,7 @@ def principal() -> None:
     analisador = argparse.ArgumentParser(description="Gera o dataset sintético da esteira MetalTech")
     analisador.add_argument("--dias", type=int, default=7, help="dias de operação simulados (padrão: 7)")
     analisador.add_argument("--seed", type=int, default=42, help="semente para reprodutibilidade (padrão: 42)")
-    analisador.add_argument("--saida", type=Path, default=PASTA / "leituras_simuladas.csv")
+    analisador.add_argument("--saida", type=Path, default=PASTA / "dataset" / "leituras_simuladas.csv")
     argumentos = analisador.parse_args()
 
     df = gerar_dataset(argumentos.dias, argumentos.seed)

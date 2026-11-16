@@ -112,21 +112,31 @@ No laboratório, com o servidor e o gateway na rede do SENAI:
 
 ## Estrutura do repositório
 
+Cada pasta de módulo tem o seu README, com execução, detalhes e solução de problemas.
+
 ```text
 .
-├── backend/                 API REST (Spring Boot) · README com execução e contrato da API
-├── frontend/                Dashboard (React + Vite, servido por Nginx no Docker) · README com rotas e integração
-├── automacao/               Gateway IO-Link · README com circuito, sensores e calibração
-├── dados/                   Ciência de Dados: scripts, dataset, gráficos e resultados · README com execução
-├── realidade-aumentada/     App WebAR (A-Frame + MindAR), publicado no GitHub Pages
+├── backend/                     API REST (Spring Boot)
+│   ├── src/main/java/.../       domain · application · api · infrastructure
+│   ├── src/main/resources/      application.yml e migrações Flyway (V1 a V3)
+│   └── src/test/                72 testes (unitários, integração com H2 e com MySQL)
+├── frontend/                    Dashboard (React + Vite, servido por Nginx no Docker)
+│   └── src/                     pages/ (telas) · components/ · services/api.js · styles/
+├── automacao/                   Gateway IO-Link: gateway.py e config.example.json
+├── dados/                       Ciência de Dados
+│   ├── scripts/                 gerar_dataset.py · analise_estatistica.py · enviar_para_api.py
+│   ├── dataset/                 dataset sintético (CSV)
+│   ├── graficos/                gráficos do relatório
+│   └── resultados/              indicadores, outliers e validação API × pandas
+├── realidade-aumentada/         App WebAR (A-Frame + MindAR), publicado no GitHub Pages
 ├── docs/
-│   ├── projeto.md                   enunciado oficial
+│   ├── projeto.md               enunciado oficial
 │   ├── relatorio_ciencia_dados.md   relatório de Ciência de Dados (entregável)
-│   ├── arquitetura_nuvem.md         documento de arquitetura de nuvem (entregável)
-│   └── img/qrcode-ra.png            QR code do app de RA
-├── db/init.sql              inicialização do MySQL (charset/fuso; tabelas via Flyway)
-├── compose.yaml             stack Docker: db + backend + frontend; profiles "esteira" (gateway) e "dados"
-└── .env.example             modelo das credenciais (copie para .env)
+│   ├── arquitetura_nuvem.md     documento de arquitetura de nuvem (entregável)
+│   └── img/qrcode-ra.png        QR code do app de RA
+├── db/init.sql                  inicialização do MySQL (charset/fuso; tabelas via Flyway)
+├── compose.yaml                 stack Docker: db + backend + frontend; profiles "esteira" (gateway) e "dados"
+└── .env.example                 modelo das credenciais (copie para .env)
 ```
 
 ## Pré-requisitos
