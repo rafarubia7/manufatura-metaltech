@@ -2,7 +2,7 @@
 Envia o dataset sintético para a API (POST /api/v1/leituras) e confronta os indicadores
 da API com os calculados pelo pandas. Resultado em dados/resultados/validacao_integracao.json.
 
-Pré-requisito: backend rodando com o banco vazio (docs/guia_execucao.md).
+Pré-requisito: backend rodando com o banco vazio (backend/README.md).
 
 Uso:
     python enviar_para_api.py
@@ -155,7 +155,7 @@ def principal() -> None:
     try:
         existentes = total_na_api(sessao, argumentos.url, timeout=10)
     except requests.RequestException as erro:
-        sys.exit(f"API indisponível em {argumentos.url}: {erro}\nSuba o backend antes (docs/guia_execucao.md).")
+        sys.exit(f"API indisponível em {argumentos.url}: {erro}\nSuba o backend antes (backend/README.md).")
     if existentes:
         print(f"ATENÇÃO: o banco já tem {existentes} leituras; a validação compara o total e vai acusar diferença.\n"
               "Para recomeçar do zero: docker compose down -v && docker compose up -d mysql")

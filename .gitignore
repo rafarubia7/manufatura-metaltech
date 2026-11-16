@@ -22,9 +22,8 @@ Thumbs.db
 # Ambiente local e segredos
 .env
 
-# Documentos locais
-plano_acao_tecnico.md
-projeto_interdisciplinar.md
+# Saída repetida da análise (o conteúdo está no relatório de Ciência de Dados)
+dados/resultados/resumo*.txt
 
 # Configuração local do gateway (use automacao/config.example.json como modelo)
 automacao/config.json

@@ -232,14 +232,14 @@ O PDF pede "um critério simples de alerta". Dos detectores avaliados contra a v
 - **Definição:** diferença entre o nível atual e o da primeira leitura dos 3 minutos anteriores, dividida pelo tempo decorrido (mínimo de 1 minuto entre as duas).
 - **Resultado no dataset de 7 dias:** 97 leituras acima do limite, agrupadas em **15 alertas** (um por episódio); nenhum ativo ao final.
 - **Por que 5 %/min:** com 8 %/min não há nenhum alerta; com 3 %/min seriam 14. O limite de 5 %/min fica logo acima do enchimento normal (cerca de 0,5 %/min por turno) e capta as rajadas que se formam depois de um gargalo.
-- **Implementação:** o mesmo critério roda no back-end (alerta `ENCHIMENTO_RAPIDO`) e é exibido no dashboard e na RA.
+- **Implementação:** o mesmo critério roda no back-end (alerta `ENCHIMENTO_RAPIDO`). Ele chega ao dashboard como ocorrência e ao campo `exibirAlerta` de `GET /api/v1/esteira/status`. A RA mostra a faixa "Enchimento acima do padrão" com base em uma simulação local que imita esse critério, porque o celular não tem acesso à rede do SENAI, onde fica a API ([README, "Restrição de rede e o R.A"](../README.md#restrição-de-rede-e-o-ra)).
 - **Limitação:** a regra assume leituras em ordem cronológica e não detecta enchimento lento e contínuo; para isso vale o alerta por faixa de nível (80% e 95%).
 
 ---
 
 ## 7. Relação com os alertas do back-end
 
-O back-end mantém **um alerta ativo por tipo e dispositivo**, resolve automaticamente o alerta quando a condição muda, gera um alerta para **cada** conflito AMBAS e abre um alerta ENCHIMENTO_RAPIDO por episódio de enchimento acima de 5 %/min (seção 6.3). Aplicando a mesma regra ao dataset:
+O back-end mantém **um alerta ativo por tipo e dispositivo**, resolve automaticamente o alerta quando a condição muda, gerava um alerta para **cada** conflito AMBAS no modelo simulado (regra revista depois dos testes com o hardware real, ver a nota ao fim desta seção) e abre um alerta ENCHIMENTO_RAPIDO por episódio de enchimento acima de 5 %/min (seção 6.3). Aplicando a mesma regra ao dataset:
 
 | Tipo de alerta | Gerados na semana | Duração média ativa |
 |---|---|---|
@@ -284,10 +284,10 @@ A análise também roda diretamente sobre os dados persistidos (`analise_estatis
 
 1. **Acionar o esvaziamento por tempo até o transbordo, e não só por nível fixo.** Com a taxa de enchimento já disponível nos dados, o back-end pode estimar quanto falta para chegar a 95% e alertar quando o prazo for menor que o tempo típico de reação. Alternativa simples: limiar de 75% no turno T1.
 2. **Corrigir o alinhamento das peças.** 79% das DESCONHECIDAS passaram a mais de 12 cm dos sensores. Uma guia lateral que mantenha as peças a até 10 cm recuperaria cerca de 4,9% das peças e elevaria a acurácia de classificação de 93% para cerca de 98%, sem trocar sensores.
-3. **Monitorar a concentração de conflitos AMBAS.** Conflitos isolados são raros; conflitos em sequência indicam deriva do capacitivo e pedem recalibração.
+3. **Monitorar a concentração de conflitos AMBAS.** Conflitos isolados são raros; conflitos em sequência indicam deriva do capacitivo e pedem recalibração. Com o hardware real, indutivo + capacitivo é peça metálica (nota da seção 7), então a deriva precisa ser medida pela intensidade do sinal.
 4. **Tratar a falha de conexão como alarme de manutenção.** A assinatura (dois sensores ≈ 0) é inequívoca e teve 100% de precisão.
 5. **Gargalos custam 4,6% da disponibilidade** e, depois de destravados, provocam rajadas que aceleram o enchimento. Liberar o acúmulo de forma controlada reduz o risco de nível crítico.
-6. **Revisar a política de alertas:** rebaixar RESERVATORIO_BAIXO e agrupar CONTAGEM_ANOMALA. Isso deixaria ~10 alertas acionáveis por dia (incluindo os de enchimento rápido), em vez de 23.
+6. **Revisar a política de alertas:** rebaixar RESERVATORIO_BAIXO e agrupar CONTAGEM_ANOMALA (com o hardware real, CONTAGEM_ANOMALA já não é gerado; nota da seção 7). Isso deixaria ~10 alertas acionáveis por dia (incluindo os de enchimento rápido), em vez de 23.
 
 ---
 
@@ -319,6 +319,5 @@ Artefatos:
 | `dados/eventos_simulados.csv` | Janelas das anomalias injetadas |
 | `dados/resultados/estatisticas.json` | Todos os indicadores numéricos |
 | `dados/resultados/outliers.csv` | Leituras sinalizadas e respectivos detectores |
-| `dados/resultados/resumo.txt` | Resumo textual |
 | `dados/resultados/validacao_integracao.json` | Validação API × pandas |
 | `dados/graficos/*.png` | 10 gráficos técnicos |

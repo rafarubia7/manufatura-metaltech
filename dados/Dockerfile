@@ -8,8 +8,8 @@ ENV PYTHONUNBUFFERED=1 \
     MPLBACKEND=Agg
 
 WORKDIR /app/dados
-COPY requirements.txt requirements-dev.txt ./
-RUN pip install --no-cache-dir -r requirements-dev.txt
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Cópia dos scripts para a imagem funcionar sozinha. No compose.yaml a pasta dados/
 # é montada por cima, para gráficos e resultados aparecerem direto no host.

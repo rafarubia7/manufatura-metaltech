@@ -18,7 +18,7 @@ Os dois cenários usam **as mesmas imagens Docker** (`backend/Dockerfile`, `fron
 | Banco de dados | Contêiner `db` (MySQL 8.0) com volume `mysql_data` | Amazon RDS for MySQL 8.0 |
 | Dashboard (React) | Contêiner `frontend` (Nginx) | Amazon S3 + CloudFront |
 | Ciência de Dados | Contêiner `dados`, sob demanda | PC da equipe, consumindo a API |
-| App de RA | Página estática no celular. É independente e usa **dados simulados**: não consome a API | Igual (hospedagem estática) |
+| App de RA | Página estática no **GitHub Pages** (HTTPS): https://rafarubia7.github.io/manufatura-metaltech/realidade-aumentada/. Usa **dados simulados** e não consome a API (seção 2.7) | GitHub Pages ou S3 + CloudFront, consumindo a API pública por HTTPS |
 
 O gateway fica sempre no laboratório, nos dois cenários: ele precisa estar na mesma rede do mestre IO-Link (`10.110.12.41`), que não é acessível pela internet.
 
@@ -131,9 +131,17 @@ docker compose stop / up -d            # parar e voltar sem perder dados
 
 Acesso pela rede: dashboard em `http://<ip-do-servidor>:3000` e API em `http://<ip-do-servidor>:8080/api/v1`. Se outro computador não abrir, libere as portas 3000 e 8080 no firewall do Windows do servidor (rede privada).
 
+### 2.7 Isolamento da rede do laboratório
+
+A bancada (mestre IO-Link `10.110.12.41`) e o servidor da plataforma ficam na rede do SENAI. A equipe não administra essa rede, e dispositivos de fora dela, como o celular que abre o R.A, não alcançam a API. A equipe confirmou essa restrição com o professor.
+
+- **Vantagem:** a bancada e a API ficam protegidas da internet. Só quem está na rede do laboratório consulta ou altera dados.
+- **Consequência:** o R.A, que roda no celular, não consegue consumir `/api/v1/esteira/status`. Por isso ele usa dados simulados no mesmo formato ([README, "Restrição de rede e o R.A"](../README.md#restrição-de-rede-e-o-ra)).
+- **Como a produção resolve:** o PC do laboratório tem saída HTTPS para a internet. Na arquitetura da seção 3, o gateway **envia** as leituras para a API na nuvem (conexão de saída, sem abrir a rede do SENAI). O dashboard e o R.A passam a consumir essa API pública por HTTPS, de qualquer rede.
+
 ## 3. Arquitetura proposta para produção: AWS (PaaS)
 
-Quando a plataforma precisar ficar disponível fora do laboratório, com alta disponibilidade, a proposta é migrar API, banco e dashboard para a **AWS** no modelo **PaaS**. A tabela da seção 3.2 mostra os equivalentes no Azure.
+Quando a plataforma precisar ficar disponível fora do laboratório (por exemplo, para o R.A no celular, seção 2.7), com alta disponibilidade, a proposta é migrar API, banco e dashboard para a **AWS** no modelo **PaaS**. A tabela da seção 3.2 mostra os equivalentes no Azure.
 
 ```mermaid
 flowchart LR
