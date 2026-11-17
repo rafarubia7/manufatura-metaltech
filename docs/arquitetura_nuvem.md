@@ -119,17 +119,125 @@ Get-Content backup_metaltech.sql | docker exec -i metaltech-db sh -c 'mysql -uro
 - **Mais esteiras:** cada esteira ganha um gateway com `dispositivo_id` próprio. A API e o banco já separam leituras e alertas por dispositivo, e as tabelas têm índices por data, tipo de peça, status e dispositivo.
 - **Limite:** escalar horizontalmente (várias instâncias da API atrás de um balanceador) não faz sentido em uma só máquina. Esse é o ponto em que a migração para a nuvem compensa.
 
-### 2.6 Operação
+### 2.6 Dockerização: comandos de criação e operação
+
+Todos os comandos rodam no PowerShell, na **raiz do repositório** (onde está o `compose.yaml`). O nome do projeto no Compose é o da pasta (`manufatura-metaltech`), e é ele que prefixa a rede e o volume (`manufatura-metaltech_rede_interna`, `manufatura-metaltech_mysql_data`).
+
+#### 2.6.1 Pré-requisitos
 
 ```powershell
-Copy-Item .env.example .env            # uma vez; defina as senhas (e COMPOSE_PROFILES=esteira)
-docker compose up -d --build           # sobe tudo
-docker compose ps                      # todos "Up" e "healthy"
-docker compose logs -f backend         # logs da API (idem gateway, db, frontend)
-docker compose stop / up -d            # parar e voltar sem perder dados
+docker version                         # Docker Desktop instalado e o engine (WSL 2) rodando
+docker compose version                 # Compose v2 ("docker compose", sem hífen)
+git clone https://github.com/rafarubia7/manufatura-metaltech.git
+cd manufatura-metaltech
 ```
 
-Acesso pela rede: dashboard em `http://<ip-do-servidor>:3000` e API em `http://<ip-do-servidor>:8080/api/v1`. Se outro computador não abrir, libere as portas 3000 e 8080 no firewall do Windows do servidor (rede privada).
+As portas **3000** (dashboard), **8080** (API) e **3307** (MySQL, só local) precisam estar livres. Se o back-end ou o front estiverem rodando fora do Docker (`mvnw spring-boot:run`, `npm run dev`, Run do VS Code), pare-os antes. Para descobrir quem ocupa uma porta:
+
+```powershell
+Get-NetTCPConnection -State Listen -LocalPort 8080,3000,3307 | Select-Object LocalPort,OwningProcess
+```
+
+#### 2.6.2 Variáveis de ambiente
+
+```powershell
+Copy-Item .env.example .env            # uma vez; edite MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD e, se quiser, API_KEY
+docker compose config --quiet          # valida o compose.yaml com o .env (sem saída = ok)
+```
+
+O `.env` não vai para o Git. Sem `MYSQL_PASSWORD` ou `MYSQL_ROOT_PASSWORD`, o compose recusa subir. Atenção: as senhas do MySQL só são aplicadas na **primeira** subida (volume vazio). Trocar a senha no `.env` depois não muda a senha do banco que já existe.
+
+#### 2.6.3 Criação das imagens
+
+Cada serviço próprio tem um `Dockerfile` *multi-stage*: uma etapa compila e a outra roda só o resultado, numa imagem menor.
+
+| Imagem | Dockerfile | Etapa de build | Etapa de execução |
+|---|---|---|---|
+| `metaltech-backend` | `backend/Dockerfile` | `eclipse-temurin:17-jdk-alpine` + Maven Wrapper (`package spring-boot:repackage`) | `eclipse-temurin:17-jre-alpine`, usuário `metaltech` |
+| `metaltech-frontend` | `frontend/Dockerfile` | `node:22-alpine` (`npm ci` + `npm run build`) | `nginx:1.27-alpine` com `frontend/nginx.conf` |
+| `metaltech-gateway` | `automacao/Dockerfile` | — | `python:3.13-slim`, usuário `gateway` |
+| `metaltech-dados` | `dados/Dockerfile` | — | `python:3.13-slim` (pandas, matplotlib) |
+| `mysql:8.0` | imagem oficial | — | baixada do Docker Hub |
+
+```powershell
+docker compose build                                   # backend e frontend (serviços sem profile)
+docker compose --profile esteira --profile dados build # inclui gateway e dados
+docker compose pull db                                 # baixa a imagem mysql:8.0
+docker images "metaltech-*"                            # confere as imagens criadas
+```
+
+Equivalente sem o Compose, imagem por imagem:
+
+```powershell
+docker build -t metaltech-backend  ./backend
+docker build -t metaltech-frontend ./frontend          # opcional: --build-arg VITE_API_URL=http://<ip>:8080
+docker build -t metaltech-gateway  ./automacao
+docker build -t metaltech-dados    ./dados
+```
+
+O build do back-end baixa as dependências do Maven antes de copiar o código (`dependency:go-offline`): quando só o código muda, o Docker reaproveita essa camada e o build fica bem mais rápido. Para forçar tudo do zero: `docker compose build --no-cache`.
+
+#### 2.6.4 Criação dos contêineres, rede e volume
+
+```powershell
+docker compose up -d --remove-orphans  # cria a rede, o volume e os contêineres db, backend e frontend
+docker compose ps                      # aguarde db e backend "healthy" (a API leva ~40 s)
+```
+
+O `up -d` sobe na ordem definida pelos healthchecks: `db` → `backend` (depois do MySQL `healthy`) → `frontend`. O `--remove-orphans` apaga contêineres de versões antigas do compose que não existem mais no arquivo.
+
+O que é criado:
+
+| Recurso | Nome | Comando para inspecionar |
+|---|---|---|
+| Rede bridge | `manufatura-metaltech_rede_interna` | `docker network inspect manufatura-metaltech_rede_interna` |
+| Volume | `manufatura-metaltech_mysql_data` | `docker volume inspect manufatura-metaltech_mysql_data` |
+| Contêineres | `metaltech-db`, `metaltech-backend`, `metaltech-frontend` | `docker ps --filter name=metaltech` |
+
+Na primeira subida (volume vazio), o MySQL cria o banco `metaltech` e o usuário da aplicação, e roda o `db/init.sql`. Em seguida o back-end aplica as migrações do Flyway (`V1` a `V3`), que criam as tabelas.
+
+Serviços opcionais (profiles):
+
+```powershell
+Copy-Item automacao/config.example.json automacao/config.json      # uma vez, para o gateway
+docker compose --profile esteira up -d --build                     # sobe também o gateway IO-Link
+docker compose --profile dados run --rm dados                      # análise sobre o CSV (sai ao terminar)
+docker compose --profile dados run --rm dados analise_estatistica.py --fonte api --url http://backend:8080
+```
+
+#### 2.6.5 Verificação
+
+```powershell
+docker compose logs -f backend                         # logs da API (idem db, frontend, gateway)
+Invoke-RestMethod http://localhost:8080/actuator/health          # {"status":"UP"}
+Invoke-RestMethod http://localhost:8080/api/v1/esteira/status    # 404 enquanto o banco não tiver nenhuma leitura
+docker exec -it metaltech-db mysql -umetaltech -p metaltech      # console do banco (senha do .env)
+```
+
+- Dashboard: `http://localhost:3000` (ou `http://<ip-do-servidor>:3000` na rede)
+- API e Swagger: `http://localhost:8080/api/v1` e `http://localhost:8080/swagger-ui.html`
+
+Se outro computador da rede não abrir, libere as portas 3000 e 8080 no firewall do Windows do servidor (rede privada).
+
+#### 2.6.6 Atualizar depois de mudanças no código
+
+```powershell
+git pull                               # traz a versão nova
+docker compose up -d --build           # reconstrói só as imagens que mudaram e recria os contêineres delas
+docker image prune -f                  # remove as imagens antigas sem uso (<none>)
+```
+
+Sem o `--build`, o Compose reaproveita as imagens antigas e as mudanças não aparecem. O volume do banco é mantido; mudanças no esquema chegam pelas novas migrações do Flyway, aplicadas quando a API sobe. Para reconstruir só um serviço: `docker compose up -d --build backend`.
+
+#### 2.6.7 Parar, remover e recomeçar
+
+```powershell
+docker compose stop                    # para os contêineres (dados preservados)
+docker compose start                   # volta a rodar
+docker compose down                    # remove contêineres e rede; o volume (banco) continua
+docker compose down -v                 # remove TAMBÉM o volume: apaga o banco (faça backup antes, seção 2.4)
+docker compose down --rmi local        # remove também as imagens metaltech-*
+```
 
 ### 2.7 Isolamento da rede do laboratório
 
