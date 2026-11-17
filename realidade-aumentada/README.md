@@ -7,8 +7,8 @@ Aplicação **WebAR** do Projeto Integrador da MetalTech. Ao apontar a câmera d
    - 🟢 verde, **Normal**: abaixo de 80%
    - 🟡 amarelo, **Atenção: perto da capacidade**: a partir de 80%
    - 🔴 vermelho, **Crítico: esvaziar o reservatório**: a partir de 95%
-   - abaixo de 10% aparece **Normal (nível baixo)**, apenas informativo e sem cor de alerta
-3. **Faixa "Enchimento acima do padrão (> 5 %/min)"**: faixa vermelha piscando no painel de nível quando o reservatório sobe mais de 5 pontos percentuais entre duas atualizações. Ela some na atualização seguinte, quando o enchimento volta ao ritmo normal;
+   - abaixo de 20% aparece **Normal (nível baixo)**, apenas informativo e sem cor de alerta
+3. **Faixa "Enchimento acima do padrão"**: faixa vermelha piscando no painel de nível quando o reservatório sobe mais de 5 pontos percentuais entre duas atualizações. Ela some na atualização seguinte, quando o enchimento volta ao ritmo normal;
 4. **"Atualizado há X s"**: abaixo do nível, mostra há quanto tempo chegou a última leitura e avança a cada segundo (*"Atualizado agora"* nos primeiros 2 s).
 
 Quando a esteira sai da câmera, os painéis ficam mais 1,5 s na tela (para não piscarem) e depois somem; o app volta a mostrar *"Aponte a câmera para a esteira…"*.
@@ -74,7 +74,7 @@ realidade-aumentada/
    - [ ] O botão **↺ Organizar** volta os painéis para a posição e o tamanho iniciais;
    - [ ] A barra muda de cor (verde → amarelo → vermelho) conforme o nível;
    - [ ] A barra fica amarela a partir de 80% e vermelha a partir de 95%;
-   - [ ] De vez em quando aparece a faixa piscando **Enchimento acima do padrão (> 5 %/min)**, que some na atualização seguinte;
+   - [ ] De vez em quando aparece a faixa piscando **Enchimento acima do padrão**, que some na atualização seguinte;
    - [ ] O texto **Atualizado há X s** avança a cada segundo e volta para *"Atualizado agora"* a cada nova leitura;
    - [ ] Ao tirar a câmera da esteira, depois de ~1,5 s os painéis somem e volta a mensagem *"Aponte a câmera…"*;
    - [ ] Se negar a permissão da câmera, aparece *"Não foi possível acessar a câmera"*.
@@ -89,7 +89,7 @@ Todas as configurações ficam em `js/config.js`:
 | `TOLERANCIA_PERDA_MS` | `1500` | Tempo que os painéis continuam na tela depois de perder a esteira (ms) |
 | `LIMITE_ALERTA_ALTO` | `80` | A partir deste nível (%), status **Atenção** (amarelo) |
 | `LIMITE_CRITICO` | `95` | A partir deste nível (%), status **Crítico** (vermelho) |
-| `LIMITE_ALERTA_BAIXO` | `10` | Abaixo deste nível (%), **Normal (nível baixo)**, apenas informativo |
+| `LIMITE_ALERTA_BAIXO` | `20` | Abaixo deste nível (%), **Normal (nível baixo)**, apenas informativo |
 | `SALTO_ENCHIMENTO_RAPIDO` | `5` | Aumento (pontos percentuais) entre duas atualizações que mostra a faixa de enchimento acima do padrão |
 
 Na simulação, o nível sobe de 0,5 a 2 pontos por atualização, dá um salto maior que `SALTO_ENCHIMENTO_RAPIDO` a cada 8 a 10 atualizações e, ao passar de 97%, "esvazia" e recomeça perto de 20%. Assim a demonstração passa pelo verde, amarelo e vermelho e mostra a faixa de enchimento.
