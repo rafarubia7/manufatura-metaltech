@@ -11,8 +11,8 @@
             "desliga_abaixo": 1000
         },
         "indutivo": {
-            "liga_abaixo": 20000,
-            "desliga_acima": 25000
+            "liga_abaixo": 30000,
+            "desliga_acima": 32000
         }
     },
     "distancia": {
@@ -21,7 +21,8 @@
         "cm_por_unidade": 0.1,
         "cm_offset": 0.0,
         "amostras_mediana": 5,
-        "nivel_sem_leitura_pct": null
+        "nivel_sem_leitura_pct": null,
+        "sem_alvo_e_vazio": true
     },
     "nivel": {
         "limite_atencao": 80,
@@ -35,12 +36,15 @@
         }
     },
     "classificacao": {
-        "janela_s": 0.5
+        "janela_s": 0.5,
+        "liberacao_s": 0.2,
+        "max_s": 5.0
     },
     "intervalo_leitura_s": 0.1,
     "heartbeat_s": 0,
     "api_url": "http://backend:8080/api/v1/leituras",
     "api_key": null,
     "dispositivo_id": "gateway-lab-01",
-    "versao_firmware": "gateway-0.2"
+    "versao_firmware": "gateway-0.2",
+    "intervalo_distancia_s": 0.5
 }

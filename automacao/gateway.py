@@ -60,7 +60,7 @@ class Mestre:
             return corpo
 
         caminho = f"/iolinkmaster/port[{porta}]/iolinkdevice/pdin/getdata"
-        for tentativa in (1, 2):  # a 2a tentativa reabre uma conexao keep-alive caida
+        for tentativa in (1, 2, 3):  # reabre a conexao keep-alive quando o mestre derruba (WinError 10054)
             try:
                 if self.conn is None:
                     self.conn = http.client.HTTPConnection(self.host, self.porta_http, timeout=self.timeout) # busca conexão HTTP com o IO-Link Master
@@ -71,10 +71,12 @@ class Mestre:
                     raise OSError(f"HTTP {resp.status} em {caminho}")
                 return json.loads(corpo)
             except (OSError, http.client.HTTPException):
-                self.conn.close()
+                if self.conn is not None:
+                    self.conn.close()
                 self.conn = None
-                if tentativa == 2:
+                if tentativa == 3:
                     raise
+                time.sleep(0.02 * tentativa)
 
     def ler_inteiro(self, porta):
         corpo = self.ler_bruto(porta)
@@ -85,6 +87,8 @@ class Mestre:
         elif isinstance(corpo, dict) and "value" in corpo:
             valor = corpo["value"]
         elif corpo.get("code") not in (200, "200") if isinstance(corpo, dict) else False:
+            if corpo.get("code") in (530, "530"):
+                raise SemAlvo(f"sensor {porta} respondeu code 530 (sem medicao valida)")
             raise ValueError(f"sensor {porta} respondeu code {corpo.get('code')}")
         else:
             raise ValueError(f"sensor {porta} nao retornou um valor")
@@ -98,6 +102,11 @@ class Mestre:
             return int(texto, 10)
         except ValueError:
             return int(texto, 16)
+
+
+class SemAlvo(ValueError):
+    """Mestre respondeu 530: o sensor esta ligado, mas marcou a medicao como invalida
+    (no O5D150 isso acontece quando nao ha alvo dentro do alcance)."""
 
 
 def liga_capacitivo(ativo, v, c):
@@ -118,10 +127,16 @@ def liga_indutivo(ativo, v, c):
     return ativo
 
 
+_ultimo_aviso_calibracao = float("-inf")
+
+
 def nivel_percentual(raw, vazio_raw, cheio_raw):
+    global _ultimo_aviso_calibracao
     pct = (vazio_raw - raw) / (vazio_raw - cheio_raw) * 100.0
     # Fora de 0-100% indica calibracao errada (vazio_raw/cheio_raw) ou sensor fora de posicao.
-    if pct < -5.0 or pct > 105.0:
+    # No maximo um aviso a cada 30 s: o loop roda a 10 Hz e enchia o log.
+    if (pct < -5.0 or pct > 105.0) and time.monotonic() - _ultimo_aviso_calibracao >= 30.0:
+        _ultimo_aviso_calibracao = time.monotonic()
         log.warning("distancia raw=%s fora da calibracao (vazio=%s, cheio=%s): nivel %.1f%% foi limitado",
                     raw, vazio_raw, cheio_raw, pct)
     return max(0.0, min(100.0, pct))  # a API rejeita negativo (@PositiveOrZero)
@@ -149,10 +164,10 @@ def classificar(viu_metal, viu_nao_metal):
     return "DESCONHECIDA"
 
 
-def montar_payload(cfg, ts, tipo, dist_cm, ind, cap, pct):
+def montar_payload(cfg, ts, tipo, dist_cm, ind, cap, pct, status_dist="OK"):
     return {
         "timestamp": ts,
-        "sensorDistancia": {"valor": round(dist_cm, 2), "unidade": "cm", "status": "OK"},
+        "sensorDistancia": {"valor": round(dist_cm, 2), "unidade": "cm", "status": status_dist},
         "sensorIndutivo": {"detectouMetal": ind, "intensidade": None, "status": "OK"},
         "sensorCapacitivo": {"detectouNaoMetal": cap, "intensidade": None, "status": "OK"},
         "peca": {"id": str(uuid.uuid4()), "tipo": tipo, "timestampDetectado": ts},
@@ -244,13 +259,20 @@ def executar(cfg, dry_run):
 
     falha = {}  # porta -> bool; loga so quando muda (a porta 1 chegou a falhar em 55% das leituras)
 
-    def ler(porta):
+    def ler(porta, valor_sem_alvo=None):
         try:
             v = mestre.ler_inteiro(porta)
             if falha.get(porta):
                 log.info("porta %s voltou a responder", porta)
                 falha[porta] = False
             return v
+        except SemAlvo as e:
+            if valor_sem_alvo is not None:  # sem alvo no alcance = reservatorio vazio
+                return valor_sem_alvo
+            if not falha.get(porta):
+                log.warning("porta %s falhou: %s", porta, e)
+                falha[porta] = True
+            return None
         except (OSError, http.client.HTTPException, ValueError) as e:
             if not falha.get(porta):
                 log.warning("porta %s falhou: %s", porta, e)
@@ -258,58 +280,80 @@ def executar(cfg, dry_run):
             return None
 
     historico = deque(maxlen=dist_cfg["amostras_mediana"])
+    sem_alvo = dist_cfg["vazio_raw"] if dist_cfg.get("sem_alvo_e_vazio") else None
+    nivel_fallback = dist_cfg.get("nivel_sem_leitura_pct")
+    intervalo_dist = cfg.get("intervalo_distancia_s", 0.5)  # nivel muda devagar; sobra tempo p/ ind/cap
+    liberacao = cfg["classificacao"].get("liberacao_s", 0.2)  # sensores livres por este tempo = peca saiu
+    max_peca = cfg["classificacao"].get("max_s", 5.0)  # peca parada na frente: envia mesmo assim
     ind = cap = False
-    estado = "livre"  # livre -> coletando -> aguardando (sensores precisam liberar)
-    t_ini = ts_ini = None
+    estado = "livre"  # livre -> coletando -> (aguardando, so se a peca ficar parada) -> livre
+    t_ini = ts_ini = t_ativo = None
     viu_m = viu_n = False
     ultimo_envio = time.monotonic()
+    ultima_dist = float("-inf")
     avisou_sem_nivel = False
+
+    def nivel_atual():
+        """(pct, dist_cm, status) ou None se nao ha leitura nem fallback configurado."""
+        if historico:
+            raw = statistics.median(historico)
+            pct = nivel_percentual(raw, dist_cfg["vazio_raw"], dist_cfg["cheio_raw"])
+            cm = max(0.0, raw * dist_cfg["cm_por_unidade"] + dist_cfg.get("cm_offset", 0.0))
+            return pct, cm, "OK"
+        if nivel_fallback is not None:
+            return float(nivel_fallback), 0.0, "SEM_LEITURA"
+        return None
+
+    def enviar(ts, tipo, m, n):
+        nonlocal avisou_sem_nivel
+        nivel = nivel_atual()
+        if nivel is None:  # a API exige nivel em todo POST
+            if not avisou_sem_nivel:
+                log.error("sem leitura valida de distancia: pecas descartadas ate a porta voltar "
+                          "(defina distancia.nivel_sem_leitura_pct para enviar mesmo assim)")
+                avisou_sem_nivel = True
+            return
+        pct, cm, status = nivel
+        enfileirar(montar_payload(cfg, ts, tipo, cm, m, n, pct, status))
 
     while True:
         t0 = time.monotonic()
         v_cap = ler(portas["capacitivo"])
         v_ind = ler(portas["indutivo"])
-        v_dist = ler(portas["distancia"])
+        if t0 - ultima_dist >= intervalo_dist:
+            ultima_dist = t0
+            v_dist = ler(portas["distancia"], sem_alvo)
+            if v_dist is not None:
+                historico.append(v_dist)
 
-        # falha em uma porta nao derruba as outras: mantem o ultimo estado/valor
-        if v_dist is not None:
-            historico.append(v_dist)
+        # falha em uma porta nao derruba as outras: mantem o ultimo estado
         if v_cap is not None:
             cap = liga_capacitivo(cap, v_cap, sens["capacitivo"])
         if v_ind is not None:
             ind = liga_indutivo(ind, v_ind, sens["indutivo"])
-
-        if not historico:  # a API exige nivel em todo POST; espera a 1a leitura valida
-            if not avisou_sem_nivel:
-                log.warning("aguardando a primeira leitura valida da porta de distancia")
-                avisou_sem_nivel = True
-            time.sleep(1)
-            continue
-        if v_cap is None and v_ind is None:
-            time.sleep(max(0.0, dt - (time.monotonic() - t0)))
-            continue
-
-        dist_raw = statistics.median(historico)
-        pct = nivel_percentual(dist_raw, dist_cfg["vazio_raw"], dist_cfg["cheio_raw"])
-        dist_cm = max(0.0, dist_raw * dist_cfg["cm_por_unidade"] + dist_cfg.get("cm_offset", 0.0))
         detectando = ind or cap
 
-        if estado == "livre" and detectando:
-            estado, t_ini, ts_ini = "coletando", t0, agora_iso()
-            viu_m, viu_n = ind, cap
+        if estado == "livre":
+            if detectando:
+                estado, t_ini, ts_ini, t_ativo = "coletando", t0, agora_iso(), t0
+                viu_m, viu_n = ind, cap
+            elif heartbeat and t0 - ultimo_envio >= heartbeat:
+                enviar(agora_iso(), "DESCONHECIDA", False, False)
+                ultimo_envio = t0
         elif estado == "coletando":
+            # Junta tudo que os dois sensores viram enquanto a peca passa: o indutivo
+            # pode acionar depois do capacitivo, e antes isso virava NAO_METALICA.
             viu_m |= ind
             viu_n |= cap
-            if t0 - t_ini >= janela:
-                tipo = classificar(viu_m, viu_n)
-                enfileirar(montar_payload(cfg, ts_ini, tipo, dist_cm, viu_m, viu_n, pct))
+            if detectando:
+                t_ativo = t0
+            saiu = t0 - t_ini >= janela and t0 - t_ativo >= liberacao
+            if saiu or t0 - t_ini >= max_peca:
+                enviar(ts_ini, classificar(viu_m, viu_n), viu_m, viu_n)
                 ultimo_envio = t0
-                estado = "aguardando"
+                estado = "livre" if saiu else "aguardando"
         elif estado == "aguardando" and not detectando:
             estado = "livre"
-        elif estado == "livre" and heartbeat and t0 - ultimo_envio >= heartbeat:
-            enfileirar(montar_payload(cfg, agora_iso(), "DESCONHECIDA", dist_cm, False, False, pct))
-            ultimo_envio = t0
 
         time.sleep(max(0.0, dt - (time.monotonic() - t0)))
 
