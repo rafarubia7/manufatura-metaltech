@@ -232,7 +232,7 @@ O PDF pede "um critério simples de alerta". Dos detectores avaliados contra a v
 - **Definição:** diferença entre o nível atual e o da primeira leitura dos 3 minutos anteriores, dividida pelo tempo decorrido (mínimo de 1 minuto entre as duas).
 - **Resultado no dataset de 7 dias:** 97 leituras acima do limite, agrupadas em **15 alertas** (um por episódio); nenhum ativo ao final.
 - **Por que 5 %/min:** com 8 %/min não há nenhum alerta; com 3 %/min seriam 14. O limite de 5 %/min fica logo acima do enchimento normal (cerca de 0,5 %/min por turno) e capta as rajadas que se formam depois de um gargalo.
-- **Implementação:** o mesmo critério roda no back-end (alerta `ENCHIMENTO_RAPIDO`). Ele chega ao dashboard como ocorrência e ao campo `exibirAlerta` de `GET /api/v1/esteira/status`. A RA mostra a faixa "Enchimento acima do padrão" com base em uma simulação local que imita esse critério, porque o celular não tem acesso à rede do SENAI, onde fica a API ([README, "Restrição de rede e o R.A"](../README.md#restrição-de-rede-e-o-ra)).
+- **Implementação:** o mesmo critério roda no back-end (alerta `ENCHIMENTO_RAPIDO`). Ele chega ao dashboard como ocorrência e ao campo `exibirAlerta` de `GET /api/v1/esteira/status`. A RA mostra a faixa "Enchimento acima do padrão" com base em uma simulação local que imita esse critério, porque o celular não tem acesso à rede do SENAI, onde fica a API ([README do R.A](../realidade-aumentada/README.md)).
 - **Limitação:** a regra assume leituras em ordem cronológica e não detecta enchimento lento e contínuo; para isso vale o alerta por faixa de nível (80% e 95%).
 
 ---

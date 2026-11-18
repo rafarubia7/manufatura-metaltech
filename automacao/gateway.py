@@ -115,10 +115,10 @@ def classificar(viu_metal, viu_nao_metal):
     return "DESCONHECIDA"
 
 
-def montar_payload(cfg, ts, tipo, dist_cm, ind, cap, pct):
+def montar_payload(cfg, ts, tipo, dist_cm, ind, cap, pct, status_dist="OK"):
     return {
         "timestamp": ts,
-        "sensorDistancia": {"valor": round(dist_cm, 2), "unidade": "cm", "status": "OK"},
+        "sensorDistancia": {"valor": round(dist_cm, 2), "unidade": "cm", "status": status_dist},
         "sensorIndutivo": {"detectouMetal": ind, "intensidade": None, "status": "OK"},
         "sensorCapacitivo": {"detectouNaoMetal": cap, "intensidade": None, "status": "OK"},
         "peca": {"id": str(uuid.uuid4()), "tipo": tipo, "timestampDetectado": ts},
@@ -232,6 +232,9 @@ def executar(cfg, dry_run):
     viu_m = viu_n = False
     ultimo_envio = time.monotonic()
     avisou_sem_nivel = False
+    # Nivel usado enquanto a porta de distancia nunca respondeu (ex.: IO-Link code 530).
+    # None = espera a primeira leitura valida (comportamento padrao).
+    nivel_sem_leitura = dist_cfg.get("nivel_sem_leitura_pct")
 
     while True:
         t0 = time.monotonic()
@@ -247,7 +250,7 @@ def executar(cfg, dry_run):
         if v_ind is not None:
             ind = liga_indutivo(ind, v_ind, sens["indutivo"])
 
-        if not historico:  # a API exige nivel em todo POST; espera a 1a leitura valida
+        if not historico and nivel_sem_leitura is None:  # a API exige nivel em todo POST
             if not avisou_sem_nivel:
                 log.warning("aguardando a primeira leitura valida da porta de distancia")
                 avisou_sem_nivel = True
@@ -257,9 +260,17 @@ def executar(cfg, dry_run):
             time.sleep(max(0.0, dt - (time.monotonic() - t0)))
             continue
 
-        dist_raw = statistics.median(historico)
-        pct = nivel_percentual(dist_raw, dist_cfg["vazio_raw"], dist_cfg["cheio_raw"])
-        dist_cm = max(0.0, dist_raw * dist_cfg["cm_por_unidade"] + dist_cfg.get("cm_offset", 0.0))
+        if historico:
+            dist_raw = statistics.median(historico)
+            pct = nivel_percentual(dist_raw, dist_cfg["vazio_raw"], dist_cfg["cheio_raw"])
+            dist_cm = max(0.0, dist_raw * dist_cfg["cm_por_unidade"] + dist_cfg.get("cm_offset", 0.0))
+            status_dist = "OK"
+        else:
+            if not avisou_sem_nivel:
+                log.warning("porta de distancia sem leitura valida: enviando nivel %.1f%% "
+                            "(nivel_sem_leitura_pct) com sensorDistancia.status=FALHA", nivel_sem_leitura)
+                avisou_sem_nivel = True
+            pct, dist_cm, status_dist = float(nivel_sem_leitura), 0.0, "FALHA"
         detectando = ind or cap
 
         if estado == "livre" and detectando:
@@ -272,13 +283,13 @@ def executar(cfg, dry_run):
             if t0 - t_ini >= janela:
                 tipo = classificar(viu_m, viu_n)
                 log.info("classificada: %s (na janela: indutivo=%s capacitivo=%s)", tipo, viu_m, viu_n)
-                enfileirar(montar_payload(cfg, ts_ini, tipo, dist_cm, viu_m, viu_n, pct))
+                enfileirar(montar_payload(cfg, ts_ini, tipo, dist_cm, viu_m, viu_n, pct, status_dist))
                 ultimo_envio = t0
                 estado = "aguardando"
         elif estado == "aguardando" and not detectando:
             estado = "livre"
         elif estado == "livre" and heartbeat and t0 - ultimo_envio >= heartbeat:
-            enfileirar(montar_payload(cfg, agora_iso(), "DESCONHECIDA", dist_cm, False, False, pct))
+            enfileirar(montar_payload(cfg, agora_iso(), "DESCONHECIDA", dist_cm, False, False, pct, status_dist))
             ultimo_envio = t0
 
         time.sleep(max(0.0, dt - (time.monotonic() - t0)))

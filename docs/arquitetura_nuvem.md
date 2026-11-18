@@ -244,7 +244,7 @@ docker compose down --rmi local        # remove também as imagens metaltech-*
 A bancada (mestre IO-Link `10.110.12.41`) e o servidor da plataforma ficam na rede do SENAI. A equipe não administra essa rede, e dispositivos de fora dela, como o celular que abre o R.A, não alcançam a API. A equipe confirmou essa restrição com o professor.
 
 - **Vantagem:** a bancada e a API ficam protegidas da internet. Só quem está na rede do laboratório consulta ou altera dados.
-- **Consequência:** o R.A, que roda no celular, não consegue consumir `/api/v1/esteira/status`. Por isso ele usa dados simulados no mesmo formato ([README, "Restrição de rede e o R.A"](../README.md#restrição-de-rede-e-o-ra)).
+- **Consequência:** o R.A, que roda no celular, não consegue consumir `/api/v1/esteira/status`. Por isso ele usa dados simulados no mesmo formato ([README do R.A](../realidade-aumentada/README.md)).
 - **Como a produção resolve:** o PC do laboratório tem saída HTTPS para a internet. Na arquitetura da seção 3, o gateway **envia** as leituras para a API na nuvem (conexão de saída, sem abrir a rede do SENAI). O dashboard e o R.A passam a consumir essa API pública por HTTPS, de qualquer rede.
 
 ## 3. Arquitetura proposta para produção: AWS (PaaS)

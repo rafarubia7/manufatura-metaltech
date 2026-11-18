@@ -20,7 +20,8 @@
         "cheio_raw": 5,
         "cm_por_unidade": 0.1,
         "cm_offset": 0.0,
-        "amostras_mediana": 5
+        "amostras_mediana": 5,
+        "nivel_sem_leitura_pct": null
     },
     "nivel": {
         "limite_atencao": 80,
