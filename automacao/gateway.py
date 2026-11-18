@@ -120,6 +120,10 @@ def liga_indutivo(ativo, v, c):
 
 def nivel_percentual(raw, vazio_raw, cheio_raw):
     pct = (vazio_raw - raw) / (vazio_raw - cheio_raw) * 100.0
+    # Fora de 0-100% indica calibracao errada (vazio_raw/cheio_raw) ou sensor fora de posicao.
+    if pct < -5.0 or pct > 105.0:
+        log.warning("distancia raw=%s fora da calibracao (vazio=%s, cheio=%s): nivel %.1f%% foi limitado",
+                    raw, vazio_raw, cheio_raw, pct)
     return max(0.0, min(100.0, pct))  # a API rejeita negativo (@PositiveOrZero)
 
 
