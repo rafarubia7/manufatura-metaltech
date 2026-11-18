@@ -5,7 +5,6 @@ Le os 3 sensores do mestre IO-Link (GET local) e envia um POST por peca
 para /api/v1/leituras. Rodar no PC do laboratorio.
 
         python gateway.py --sondar     # mostra a resposta crua de cada porta
-        python gateway.py --sondar --continuo   # repete a cada segundo (passe uma peça para ver mudar)
         python gateway.py --dry-run    # roda tudo, imprime o JSON em vez de enviar
         python gateway.py              # producao
 """
@@ -39,17 +38,32 @@ class Mestre:
     port[1] por %5B1%5D, e o servidor embarcado do mestre pode nao decodificar.
     """
 
-    def __init__(self, base_url, timeout=2.0):
+    def __init__(self, base_url, timeout=2.0, sensor_urls=None):
         u = urlparse(base_url)
         self.host, self.porta_http, self.timeout = u.hostname, u.port or 80, timeout
+        self.sensor_urls = sensor_urls or {}
+        self.sessao = requests.Session()
         self.conn = None
 
     def ler_bruto(self, porta):
+        # Quando sensor_urls existir, porta pode ser o nome ('capacitivo',
+        # 'indutivo' ou 'distancia') e o gateway chama exatamente a URL REST.
+        if isinstance(porta, str) and porta in self.sensor_urls:
+            r = self.sessao.get(self.sensor_urls[porta], timeout=self.timeout)
+            r.raise_for_status()
+            try:
+                corpo = r.json()
+            except requests.JSONDecodeError:
+                corpo = {"value": r.text.strip()}
+            if not isinstance(corpo, dict):
+                corpo = {"value": corpo}
+            return corpo
+
         caminho = f"/iolinkmaster/port[{porta}]/iolinkdevice/pdin/getdata"
         for tentativa in (1, 2):  # a 2a tentativa reabre uma conexao keep-alive caida
             try:
                 if self.conn is None:
-                    self.conn = http.client.HTTPConnection(self.host, self.porta_http, timeout=self.timeout)
+                    self.conn = http.client.HTTPConnection(self.host, self.porta_http, timeout=self.timeout) # busca conexão HTTP com o IO-Link Master
                 self.conn.request("GET", caminho)
                 resp = self.conn.getresponse()
                 corpo = resp.read()
@@ -64,9 +78,26 @@ class Mestre:
 
     def ler_inteiro(self, porta):
         corpo = self.ler_bruto(porta)
-        if corpo.get("code") not in (200, "200") or "data" not in corpo:
-            raise ValueError(f"IO-Link code {corpo.get('code')} na porta {porta}")
-        return int(corpo["data"]["value"], 16)
+
+        dados = corpo.get("data") if isinstance(corpo, dict) else None
+        if isinstance(dados, dict) and "value" in dados:
+            valor = dados["value"]
+        elif isinstance(corpo, dict) and "value" in corpo:
+            valor = corpo["value"]
+        elif corpo.get("code") not in (200, "200") if isinstance(corpo, dict) else False:
+            raise ValueError(f"sensor {porta} respondeu code {corpo.get('code')}")
+        else:
+            raise ValueError(f"sensor {porta} nao retornou um valor")
+
+        if isinstance(valor, (int, float)):
+            return int(valor)
+        texto = str(valor).strip().lower()
+        if texto.startswith("0x"):
+            return int(texto, 16)
+        try:
+            return int(texto, 10)
+        except ValueError:
+            return int(texto, 16)
 
 
 def liga_capacitivo(ativo, v, c):
@@ -93,12 +124,11 @@ def nivel_percentual(raw, vazio_raw, cheio_raw):
 
 
 def status_nivel(pct, cfg_nivel):
-    """Nomes devem ser exatamente os do enum StatusReservatorio do backend (mesmas faixas:
-    critico >= limite_critico, alto > limite_atencao, baixo < limite_baixo)."""
+    """Nomes devem ser exatamente os do enum StatusReservatorio do backend."""
     nomes = cfg_nivel["nomes"]
     if pct >= cfg_nivel["limite_critico"]:
         return nomes["critico"]
-    if pct > cfg_nivel["limite_atencao"]:
+    if pct >= cfg_nivel["limite_atencao"]:
         return nomes["atencao"]
     if cfg_nivel.get("limite_baixo") is not None and pct < cfg_nivel["limite_baixo"]:
         return nomes["baixo"]
@@ -115,10 +145,10 @@ def classificar(viu_metal, viu_nao_metal):
     return "DESCONHECIDA"
 
 
-def montar_payload(cfg, ts, tipo, dist_cm, ind, cap, pct, status_dist="OK"):
+def montar_payload(cfg, ts, tipo, dist_cm, ind, cap, pct):
     return {
         "timestamp": ts,
-        "sensorDistancia": {"valor": round(dist_cm, 2), "unidade": "cm", "status": status_dist},
+        "sensorDistancia": {"valor": round(dist_cm, 2), "unidade": "cm", "status": "OK"},
         "sensorIndutivo": {"detectouMetal": ind, "intensidade": None, "status": "OK"},
         "sensorCapacitivo": {"detectouNaoMetal": cap, "intensidade": None, "status": "OK"},
         "peca": {"id": str(uuid.uuid4()), "tipo": tipo, "timestampDetectado": ts},
@@ -145,9 +175,12 @@ class Enviador(threading.Thread):
         self.dry_run = dry_run
         self.sessao = requests.Session()
         self.headers = {"Content-Type": "application/json"}
-        chave = cfg.get("api_key") or cfg.get("api_token")  # api_token: nome antigo, ainda aceito
-        if chave:
-            self.headers["X-API-Key"] = chave  # mesmo cabeçalho que o ApiKeyFilter do backend valida
+        if cfg.get("api_key"):
+            self.headers["X-API-Key"] = cfg["api_key"]
+        if cfg.get("api_token"):
+            self.headers["Authorization"] = f"Bearer {cfg['api_token']}"
+        if cfg.get("x_api_key"):
+            self.headers["X-API-Key"] = cfg["x_api_key"]
 
     def run(self):
         espera = 1.0
@@ -162,8 +195,6 @@ class Enviador(threading.Thread):
                 try:
                     r = self.sessao.post(self.url, json=payload, headers=self.headers, timeout=5)
                     if r.status_code < 300:
-                        log.info("enviado: %s | nivel %.1f%% | HTTP %s", payload["peca"]["tipo"],
-                                 payload["nivelReservatorio"]["percentual"], r.status_code)
                         espera = 1.0
                         break
                     if r.status_code < 500:  # 4xx: reenviar nao resolve
@@ -192,13 +223,10 @@ def validar_config(cfg, dry_run):
 
 def executar(cfg, dry_run):
     validar_config(cfg, dry_run)
-    mestre = Mestre(cfg["mestre_url"])
-    log.info("gateway iniciado%s | mestre=%s | api=%s", " (DRY-RUN: nada sera enviado)" if dry_run else "",
-             cfg["mestre_url"], cfg["api_url"])
-    log.info("aguardando pecas nos sensores (so envia quando uma peca passa; Ctrl+C para parar)")
+    mestre = Mestre(cfg["mestre_url"], sensor_urls=cfg.get("sensor_urls"))
     portas, sens, dist_cfg = cfg["portas"], cfg["sensores"], cfg["distancia"]
     janela = cfg["classificacao"]["janela_s"]
-    dt = cfg["intervalo_leitura_s"]
+    dt = cfg["intervalo_leitura_s"]  # intervalo entre leituras (nao entre envios)
     heartbeat = cfg.get("heartbeat_s", 0)
 
     fila = queue.Queue(maxsize=5000)
@@ -232,9 +260,6 @@ def executar(cfg, dry_run):
     viu_m = viu_n = False
     ultimo_envio = time.monotonic()
     avisou_sem_nivel = False
-    # Nivel usado enquanto a porta de distancia nunca respondeu (ex.: IO-Link code 530).
-    # None = espera a primeira leitura valida (comportamento padrao).
-    nivel_sem_leitura = dist_cfg.get("nivel_sem_leitura_pct")
 
     while True:
         t0 = time.monotonic()
@@ -250,7 +275,7 @@ def executar(cfg, dry_run):
         if v_ind is not None:
             ind = liga_indutivo(ind, v_ind, sens["indutivo"])
 
-        if not historico and nivel_sem_leitura is None:  # a API exige nivel em todo POST
+        if not historico:  # a API exige nivel em todo POST; espera a 1a leitura valida
             if not avisou_sem_nivel:
                 log.warning("aguardando a primeira leitura valida da porta de distancia")
                 avisou_sem_nivel = True
@@ -260,104 +285,64 @@ def executar(cfg, dry_run):
             time.sleep(max(0.0, dt - (time.monotonic() - t0)))
             continue
 
-        if historico:
-            dist_raw = statistics.median(historico)
-            pct = nivel_percentual(dist_raw, dist_cfg["vazio_raw"], dist_cfg["cheio_raw"])
-            dist_cm = max(0.0, dist_raw * dist_cfg["cm_por_unidade"] + dist_cfg.get("cm_offset", 0.0))
-            status_dist = "OK"
-        else:
-            if not avisou_sem_nivel:
-                log.warning("porta de distancia sem leitura valida: enviando nivel %.1f%% "
-                            "(nivel_sem_leitura_pct) com sensorDistancia.status=FALHA", nivel_sem_leitura)
-                avisou_sem_nivel = True
-            pct, dist_cm, status_dist = float(nivel_sem_leitura), 0.0, "FALHA"
+        dist_raw = statistics.median(historico)
+        pct = nivel_percentual(dist_raw, dist_cfg["vazio_raw"], dist_cfg["cheio_raw"])
+        dist_cm = max(0.0, dist_raw * dist_cfg["cm_por_unidade"] + dist_cfg.get("cm_offset", 0.0))
         detectando = ind or cap
 
         if estado == "livre" and detectando:
             estado, t_ini, ts_ini = "coletando", t0, agora_iso()
             viu_m, viu_n = ind, cap
-            log.info("peca detectada; classificando por %.1f s...", janela)
         elif estado == "coletando":
             viu_m |= ind
             viu_n |= cap
             if t0 - t_ini >= janela:
                 tipo = classificar(viu_m, viu_n)
-                log.info("classificada: %s (na janela: indutivo=%s capacitivo=%s)", tipo, viu_m, viu_n)
-                enfileirar(montar_payload(cfg, ts_ini, tipo, dist_cm, viu_m, viu_n, pct, status_dist))
+                enfileirar(montar_payload(cfg, ts_ini, tipo, dist_cm, viu_m, viu_n, pct))
                 ultimo_envio = t0
                 estado = "aguardando"
         elif estado == "aguardando" and not detectando:
             estado = "livre"
         elif estado == "livre" and heartbeat and t0 - ultimo_envio >= heartbeat:
-            enfileirar(montar_payload(cfg, agora_iso(), "DESCONHECIDA", dist_cm, False, False, pct, status_dist))
+            enfileirar(montar_payload(cfg, agora_iso(), "DESCONHECIDA", dist_cm, False, False, pct))
             ultimo_envio = t0
 
         time.sleep(max(0.0, dt - (time.monotonic() - t0)))
 
 
-def sondar(cfg, continuo=False):
-    """Mostra a leitura crua de cada porta. Com --continuo, repete a cada segundo (Ctrl+C para sair)."""
-    mestre = Mestre(cfg["mestre_url"])
-    sens = cfg["sensores"]
-    ind = cap = False
-    while True:
-        if not continuo:
-            for nome, porta in cfg["portas"].items():
-                try:
-                    bruto = mestre.ler_bruto(porta)
-                    hx = bruto["data"]["value"]
-                    print(f"porta {porta} ({nome}): hex={hx} int={int(hx, 16)} resposta={json.dumps(bruto)}")
-                except Exception as e:  # diagnostico: mostrar qualquer erro
-                    print(f"porta {porta} ({nome}): ERRO {e}")
-            return
-        partes = []
-        for nome, porta in cfg["portas"].items():
-            try:
-                v = mestre.ler_inteiro(porta)
-            except Exception as e:
-                partes.append(f"{nome}=ERRO({e})")
-                continue
-            if nome == "indutivo":
-                ind = liga_indutivo(ind, v, sens["indutivo"])
-                partes.append(f"indutivo={v} ({'METAL' if ind else 'livre'})")
-            elif nome == "capacitivo":
-                cap = liga_capacitivo(cap, v, sens["capacitivo"])
-                partes.append(f"capacitivo={v} ({'PECA' if cap else 'livre'})")
-            else:
-                partes.append(f"{nome}={v}")
-        print(time.strftime("%H:%M:%S"), " | ".join(partes), flush=True)
+def sondar(cfg):
+    mestre = Mestre(cfg["mestre_url"], sensor_urls=cfg.get("sensor_urls"))
+    for nome, porta in cfg["portas"].items():
         try:
-            time.sleep(1)
-        except KeyboardInterrupt:
-            return
-
-
-def aplicar_variaveis_ambiente(cfg):
-    """Variáveis de ambiente preenchidas têm prioridade sobre o config.json.
-    No Docker (compose.yaml) a API é http://backend:8080, e não localhost."""
-    for variavel, chave in (("GATEWAY_API_URL", "api_url"), ("GATEWAY_API_KEY", "api_key"),
-                            ("GATEWAY_MESTRE_URL", "mestre_url")):
-        valor = os.environ.get(variavel, "").strip()
-        if valor:
-            cfg[chave] = valor
+            bruto = mestre.ler_bruto(porta)
+            hx = bruto["data"]["value"]
+            print(f"porta {porta} ({nome}): hex={hx} int={int(hx, 16)} resposta={json.dumps(bruto)}")
+        except Exception as e:  # diagnostico: mostrar qualquer erro
+            print(f"porta {porta} ({nome}): ERRO {e}")
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--config", default="config.json")
     ap.add_argument("--sondar", action="store_true")
-    ap.add_argument("--continuo", action="store_true", help="com --sondar: repete a leitura a cada segundo")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     with open(args.config, encoding="utf-8") as f:
         cfg = json.load(f)
-    aplicar_variaveis_ambiente(cfg)
+
+    api_url = os.getenv("GATEWAY_API_URL")
+    api_key = os.getenv("GATEWAY_API_KEY")
+    mestre_url = os.getenv("GATEWAY_MESTRE_URL")
+    if api_url:
+        cfg["api_url"] = api_url
+    if api_key:
+        cfg["api_key"] = api_key
+    if mestre_url:
+        cfg["mestre_url"] = mestre_url
+
     if args.sondar:
-        try:
-            sondar(cfg, args.continuo)
-        except KeyboardInterrupt:
-            pass
+        sondar(cfg)
     else:
         try:
             executar(cfg, args.dry_run)

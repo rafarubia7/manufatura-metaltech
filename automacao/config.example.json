@@ -1,9 +1,9 @@
 {
-    "mestre_url": "http://10.110.12.41",
-    "portas": {
-        "distancia": 1,
-        "capacitivo": 2,
-        "indutivo": 3
+    "mestre_url": "http://10.110.12.76:5000",
+    "sensor_urls": {
+        "capacitivo": "http://10.110.12.76:5000/sensores/capacitivo",
+        "indutivo": "http://10.110.12.76:5000/sensores/indutivo",
+        "distancia": "http://10.110.12.76:5000/sensores/distancia"
     },
     "sensores": {
         "capacitivo": {
@@ -39,7 +39,7 @@
     },
     "intervalo_leitura_s": 0.1,
     "heartbeat_s": 0,
-    "api_url": "http://localhost:8080/api/v1/leituras",
+    "api_url": "http://backend:8080/api/v1/leituras",
     "api_key": null,
     "dispositivo_id": "gateway-lab-01",
     "versao_firmware": "gateway-0.2"
