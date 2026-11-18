@@ -18,6 +18,7 @@
     "distancia": {
         "vazio_raw": 80,
         "cheio_raw": 5,
+        "desloca_bits": 4,
         "cm_por_unidade": 0.1,
         "cm_offset": 0.0,
         "amostras_mediana": 5,

@@ -259,9 +259,9 @@ def executar(cfg, dry_run):
 
     falha = {}  # porta -> bool; loga so quando muda (a porta 1 chegou a falhar em 55% das leituras)
 
-    def ler(porta, valor_sem_alvo=None):
+    def ler(porta, valor_sem_alvo=None, desloca=0):
         try:
-            v = mestre.ler_inteiro(porta)
+            v = mestre.ler_inteiro(porta) >> desloca
             if falha.get(porta):
                 log.info("porta %s voltou a responder", porta)
                 falha[porta] = False
@@ -281,6 +281,9 @@ def executar(cfg, dry_run):
 
     historico = deque(maxlen=dist_cfg["amostras_mediana"])
     sem_alvo = dist_cfg["vazio_raw"] if dist_cfg.get("sem_alvo_e_vazio") else None
+    # O5D150: a palavra de 16 bits traz a distancia nos 12 bits altos e bits de status
+    # nos 4 baixos (leituras sobem de 16 em 16: 0x5A1, 0x5B1, 0x5C1...). 4 = distancia em mm.
+    desloca_dist = dist_cfg.get("desloca_bits", 0)
     nivel_fallback = dist_cfg.get("nivel_sem_leitura_pct")
     intervalo_dist = cfg.get("intervalo_distancia_s", 0.5)  # nivel muda devagar; sobra tempo p/ ind/cap
     liberacao = cfg["classificacao"].get("liberacao_s", 0.2)  # sensores livres por este tempo = peca saiu
@@ -322,7 +325,7 @@ def executar(cfg, dry_run):
         v_ind = ler(portas["indutivo"])
         if t0 - ultima_dist >= intervalo_dist:
             ultima_dist = t0
-            v_dist = ler(portas["distancia"], sem_alvo)
+            v_dist = ler(portas["distancia"], sem_alvo, desloca_dist)
             if v_dist is not None:
                 historico.append(v_dist)
 
@@ -363,8 +366,15 @@ def sondar(cfg):
     for nome, porta in cfg["portas"].items():
         try:
             bruto = mestre.ler_bruto(porta)
+            if "data" not in bruto:
+                print(f"porta {porta} ({nome}): sem valor (code {bruto.get('code')}; 530 = sem alvo no alcance) "
+                      f"resposta={json.dumps(bruto)}")
+                continue
             hx = bruto["data"]["value"]
-            print(f"porta {porta} ({nome}): hex={hx} int={int(hx, 16)} resposta={json.dumps(bruto)}")
+            extra = ""
+            if nome == "distancia" and cfg["distancia"].get("desloca_bits"):
+                extra = f" distancia={int(hx, 16) >> cfg['distancia']['desloca_bits']} (use em vazio_raw/cheio_raw)"
+            print(f"porta {porta} ({nome}): hex={hx} int={int(hx, 16)}{extra} resposta={json.dumps(bruto)}")
         except Exception as e:  # diagnostico: mostrar qualquer erro
             print(f"porta {porta} ({nome}): ERRO {e}")
 
